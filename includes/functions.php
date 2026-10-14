@@ -17,40 +17,37 @@ function getDiskonByTanggal($conn, $tanggal) {
     return $stmt->get_result()->fetch_assoc();
 }
 
-// Generate gambar kode booking (PNG) menggunakan GD
+// Generate gambar kode booking (SVG, tidak butuh GD extension)
 function generateKodeGambar($kode, $simpanDir = null) {
     if (!$simpanDir) $simpanDir = __DIR__ . '/../assets/booking_codes/';
     if (!is_dir($simpanDir)) mkdir($simpanDir, 0777, true);
 
-    $w = 500; $h = 220;
-    $img = imagecreatetruecolor($w, $h);
+    $filename = 'kode_' . $kode . '.svg';
+    $filepath = $simpanDir . $filename;
 
-    $bg     = imagecolorallocate($img, 20, 83, 45);      // hijau tua
-    $white  = imagecolorallocate($img, 255, 255, 255);
-    $accent = imagecolorallocate($img, 250, 204, 21);    // kuning
+    $kodeEsc = htmlspecialchars($kode, ENT_XML1, 'UTF-8');
 
-    imagefilledrectangle($img, 0, 0, $w, $h, $bg);
-    imagerectangle($img, 8, 8, $w-9, $h-9, $accent);
+    $svg = '<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="500" height="220" viewBox="0 0 500 220">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#166534"/>
+      <stop offset="100%" stop-color="#14532d"/>
+    </linearGradient>
+  </defs>
+  <rect width="500" height="220" fill="url(#bg)" rx="12"/>
+  <rect x="10" y="10" width="480" height="200" fill="none" stroke="#facc15" stroke-width="2" rx="8"/>
 
-    // Header
-    imagestring($img, 5, 30, 30, 'KODE BOOKING', $white);
-    imagestring($img, 3, 30, 55, 'Reservasi Sarana Olahraga BPSDMD Kalsel', $accent);
+  <text x="30" y="52" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="bold">KODE BOOKING</text>
+  <text x="30" y="74" fill="#facc15" font-family="Segoe UI, Arial, sans-serif" font-size="11">Reservasi Sarana Olahraga BPSDMD Kalsel</text>
 
-    // Kode besar
-    $fontSize = 5;
-    $textWidth = imagefontwidth($fontSize) * strlen($kode);
-    $x = ($w - $textWidth) / 2;
-    imagestring($img, $fontSize, $x, 100, $kode, $white);
+  <rect x="30" y="95" width="440" height="60" fill="#ffffff" rx="8"/>
+  <text x="250" y="135" fill="#166534" font-family="Courier New, monospace" font-size="30" font-weight="bold" text-anchor="middle">' . $kodeEsc . '</text>
 
-    // Footer
-    $footer = 'Tunjukkan gambar ini ke petugas saat check-in';
-    $fw = imagefontwidth(3) * strlen($footer);
-    imagestring($img, 3, ($w - $fw)/2, 170, $footer, $accent);
+  <text x="250" y="185" fill="#facc15" font-family="Segoe UI, Arial, sans-serif" font-size="11" text-anchor="middle">Tunjukkan gambar ini ke petugas saat check-in</text>
+</svg>';
 
-    $filename = 'kode_' . $kode . '.png';
-    imagepng($img, $simpanDir . $filename);
-    imagedestroy($img);
-
+    file_put_contents($filepath, $svg);
     return 'assets/booking_codes/' . $filename;
 }
 
@@ -87,4 +84,63 @@ function flash($key, $msg = null) {
         return $v;
     }
     $_SESSION['flash'][$key] = $msg;
+}
+
+// ============ HELPER SARANA ============
+
+// Buat slug dari nama
+function buatSlug($str) {
+    $str = strtolower(trim($str));
+    $str = preg_replace('/[^a-z0-9]+/', '-', $str);
+    return trim($str, '-');
+}
+
+// Buat slug unik (kalau sudah ada, tambah -1, -2, dst)
+function buatSlugUnik($conn, $nama, $exclude_id = null) {
+    $base = buatSlug($nama);
+    $slug = $base;
+    $i = 1;
+    while (true) {
+        $sql = "SELECT id FROM sarana WHERE slug = ?";
+        if ($exclude_id) $sql .= " AND id != " . (int)$exclude_id;
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param('s', $slug);
+        $stmt->execute();
+        if ($stmt->get_result()->num_rows === 0) break;
+        $slug = $base . '-' . $i++;
+    }
+    return $slug;
+}
+
+// Upload gambar, return nama file atau null
+function uploadGambar($file, $prefix = 'sarana') {
+    if (empty($file['name']) || $file['error'] !== UPLOAD_ERR_OK) return null;
+
+    $allowed = ['jpg', 'jpeg', 'png', 'webp'];
+    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    if (!in_array($ext, $allowed)) return null;
+
+    $maxSize = 5 * 1024 * 1024; // 5MB
+    if ($file['size'] > $maxSize) return null;
+
+    $dir = __DIR__ . '/../assets/img/sarana/';
+    if (!is_dir($dir)) mkdir($dir, 0777, true);
+
+    $filename = $prefix . '-' . time() . '-' . bin2hex(random_bytes(3)) . '.' . $ext;
+    if (move_uploaded_file($file['tmp_name'], $dir . $filename)) return $filename;
+    return null;
+}
+
+// Hapus file gambar
+function hapusGambar($filename) {
+    if (!$filename) return;
+    $path = __DIR__ . '/../assets/img/sarana/' . $filename;
+    if (file_exists($path)) unlink($path);
+}
+
+// Ambil galeri sebagai array
+function getGaleri($json) {
+    if (empty($json)) return [];
+    $arr = json_decode($json, true);
+    return is_array($arr) ? $arr : [];
 }

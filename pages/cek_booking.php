@@ -146,12 +146,12 @@ require_once __DIR__ . '/../includes/header.php';
                 <p style="margin-bottom:12px;color:#166534;font-weight:600;">
                   ✅ Booking terverifikasi — tunjukkan gambar ini saat check-in
                 </p>
-                <img src="<?= BASE_URL . '/' . e($b['kode_gambar']) ?>" 
-                     style="max-width:300px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.1);">
+                <img src="<?= BASE_URL . '/' . e($b['kode_gambar']) ?>" alt="Kode Booking" 
+                  style="max-width:100%;border-radius:8px;">
                 <div style="margin-top:12px;">
                   <a href="<?= BASE_URL . '/' . e($b['kode_gambar']) ?>" 
-                     download="kode-<?= e($b['kode_booking']) ?>.png" 
-                     class="btn btn-accent btn-sm">⬇️ Download Gambar</a>
+                    download="kode-<?= e($b['kode_booking']) ?>.svg" 
+                    class="btn btn-accent">⬇️ Download Kode</a>
                 </div>
               </div>
             <?php endif; ?>

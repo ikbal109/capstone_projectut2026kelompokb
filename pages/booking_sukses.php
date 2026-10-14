@@ -14,9 +14,11 @@ require_once __DIR__ . '/../includes/header.php';
     <h2 style="color:#166534;">✅ Booking Berhasil!</h2>
     <p style="color:#64748b;margin-bottom:20px;">Simpan gambar kode booking di bawah ini dan tunjukkan ke petugas saat check-in.</p>
 
-    <img src="<?= BASE_URL . '/' . e($b['kode_gambar']) ?>" alt="Kode Booking">
+    <img src="<?= BASE_URL . '/' . e($b['kode_gambar']) ?>" alt="Kode Booking" style="max-width:100%;border-radius:8px;">
     <p style="margin-top:16px;">
-      <a href="<?= BASE_URL . '/' . e($b['kode_gambar']) ?>" download class="btn btn-accent">Download Gambar</a>
+      <a href="<?= BASE_URL . '/' . e($b['kode_gambar']) ?>" 
+   download="kode-<?= e($b['kode_booking']) ?>.svg" 
+   class="btn btn-accent">⬇️ Download Kode</a>
       <a href="<?= BASE_URL ?>/index.php" class="btn btn-primary">Selesai</a>
     </p>
 
