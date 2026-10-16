@@ -14,14 +14,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['username'] = $user['username'];
         $_SESSION['nama'] = $user['nama_lengkap'];
         $_SESSION['role'] = $user['role'];
-        redirect(BASE_URL . ($user['role']==='admin' ? '/pages/admin/dashboard.php' : '/pages/petugas/dashboard.php'));
+        redirect(BASE_URL . '/pages/admin/dashboard.php');
     } else $err = 'Username atau password salah.';
 }
 require_once __DIR__ . '/../includes/header.php';
 ?>
 <div class="container">
   <div class="login-wrap">
-    <h2>Login Petugas</h2>
+    <h2>Login Admin</h2>
     <?php if ($err): ?><div class="alert alert-danger"><?= e($err) ?></div><?php endif; ?>
     <form method="POST">
       <div class="form-group"><label>Username</label><input name="username" class="form-control" required></div>

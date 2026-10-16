@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 14, 2026 at 03:54 PM
+-- Generation Time: Oct 16, 2026 at 06:28 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -126,8 +126,7 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `username`, `password`, `nama_lengkap`, `role`, `no_hp`, `aktif`, `created_at`) VALUES
-(1, 'admin', '$2y$10$yf3HOyWb8GJiWVOv6LpbIeEBXgqMuUbCLJipUoYZyuGraO95hQq/6', 'Administrator', 'admin', NULL, 1, '2026-10-14 13:31:32'),
-(2, 'petugas', '$2y$10$e0MYzXyjpJS7Pd0RVvHwHe1HlCS4bZJ18JuywdBq3WQ4oG8s4y0m2', 'Petugas Lapangan', 'petugas', NULL, 1, '2026-10-14 13:31:32');
+(1, 'admin', '$2y$10$yf3HOyWb8GJiWVOv6LpbIeEBXgqMuUbCLJipUoYZyuGraO95hQq/6', 'Administrator', 'admin', NULL, 1, '2026-10-14 13:31:32');
 
 --
 -- Indexes for dumped tables

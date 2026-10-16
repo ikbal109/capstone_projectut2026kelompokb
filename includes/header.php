@@ -26,7 +26,7 @@ $base = defined('BASE_URL') ? BASE_URL : '';
         <?php endif; ?>
         <a href="<?= $base ?>/pages/logout.php">Logout (<?= e($_SESSION['nama']) ?>)</a>
       <?php else: ?>
-        <a href="<?= $base ?>/pages/login.php">Login Petugas</a>
+        <a href="<?= $base ?>/pages/login.php">Login Admin</a>
       <?php endif; ?>
     </div>
   </div>
