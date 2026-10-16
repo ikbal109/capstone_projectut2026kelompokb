@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 16, 2026 at 06:28 PM
+-- Generation Time: Oct 16, 2026 at 07:53 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -44,6 +44,12 @@ CREATE TABLE `booking` (
   `diskon_id` int(11) DEFAULT NULL,
   `diskon_persen` decimal(5,2) DEFAULT 0.00,
   `total_bayar` decimal(12,2) NOT NULL,
+  `metode_pembayaran` enum('tunai','transfer') DEFAULT NULL,
+  `status_pembayaran` enum('belum_bayar','menunggu_verifikasi','berhasil','gagal') DEFAULT 'belum_bayar',
+  `bukti_transfer` varchar(255) DEFAULT NULL,
+  `catatan_pembayaran` text DEFAULT NULL,
+  `verified_payment_by` int(11) DEFAULT NULL,
+  `verified_payment_at` datetime DEFAULT NULL,
   `status` enum('pending','terverifikasi','ditolak','selesai','batal') DEFAULT 'pending',
   `kode_gambar` varchar(255) DEFAULT NULL,
   `catatan_petugas` text DEFAULT NULL,
@@ -56,8 +62,8 @@ CREATE TABLE `booking` (
 -- Dumping data for table `booking`
 --
 
-INSERT INTO `booking` (`id`, `kode_booking`, `sarana_id`, `nama_penyewa`, `no_hp`, `email`, `instansi`, `tanggal`, `jam_mulai`, `jam_selesai`, `durasi_jam`, `harga_per_jam`, `subtotal`, `diskon_id`, `diskon_persen`, `total_bayar`, `status`, `kode_gambar`, `catatan_petugas`, `verified_by`, `verified_at`, `created_at`) VALUES
-(1, 'BKG-261014-0CB99', 1, 'tes', '085172203031', 'hsgvsudh@gmail.com', 'PDIP', '2026-10-17', '08:00:00', '10:00:00', 2, 150000.00, 300000.00, NULL, 0.00, 300000.00, 'pending', 'assets/booking_codes/kode_BKG-261014-0CB99.svg', NULL, NULL, NULL, '2026-10-14 13:50:12');
+INSERT INTO `booking` (`id`, `kode_booking`, `sarana_id`, `nama_penyewa`, `no_hp`, `email`, `instansi`, `tanggal`, `jam_mulai`, `jam_selesai`, `durasi_jam`, `harga_per_jam`, `subtotal`, `diskon_id`, `diskon_persen`, `total_bayar`, `metode_pembayaran`, `status_pembayaran`, `bukti_transfer`, `catatan_pembayaran`, `verified_payment_by`, `verified_payment_at`, `status`, `kode_gambar`, `catatan_petugas`, `verified_by`, `verified_at`, `created_at`) VALUES
+(2, 'BKG-261017-D1A87', 3, 'tes2', '1234', 'hsgvsudh@gmail.com', 'GOLKAR', '2026-11-15', '12:00:00', '16:00:00', 4, 100000.00, 400000.00, NULL, 0.00, 400000.00, 'transfer', 'berhasil', 'assets/bukti_transfer/bukti-2-1792170463.jpg', '', 1, '2026-10-17 00:08:26', 'terverifikasi', 'assets/booking_codes/kode_BKG-261017-D1A87.svg', '', 1, '2026-10-17 00:09:06', '2026-10-16 17:06:57');
 
 -- --------------------------------------------------------
 
@@ -74,6 +80,29 @@ CREATE TABLE `diskon` (
   `aktif` tinyint(1) DEFAULT 1,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `pengaturan`
+--
+
+CREATE TABLE `pengaturan` (
+  `id` int(11) NOT NULL,
+  `kunci` varchar(50) NOT NULL,
+  `nilai` text DEFAULT NULL,
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `pengaturan`
+--
+
+INSERT INTO `pengaturan` (`id`, `kunci`, `nilai`, `updated_at`) VALUES
+(1, 'nama_bank', 'Bank Kalsel', '2026-10-16 16:41:26'),
+(2, 'nomor_rekening', '1234567890', '2026-10-16 16:41:26'),
+(3, 'nama_pemilik_rekening', 'BPSDMD Provinsi Kalimantan Selatan', '2026-10-16 16:41:26'),
+(4, 'catatan_tunai', 'Pembayaran dilakukan secara tunai di kantor BPSDMD Provinsi Kalimantan Selatan pada jam kerja (Senin-Jumat, 08.00-16.00 WITA). Harap membawa kode booking.', '2026-10-16 16:41:26');
 
 -- --------------------------------------------------------
 
@@ -149,6 +178,13 @@ ALTER TABLE `diskon`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `pengaturan`
+--
+ALTER TABLE `pengaturan`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `kunci` (`kunci`);
+
+--
 -- Indexes for table `sarana`
 --
 ALTER TABLE `sarana`
@@ -170,13 +206,19 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `booking`
 --
 ALTER TABLE `booking`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `diskon`
 --
 ALTER TABLE `diskon`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `pengaturan`
+--
+ALTER TABLE `pengaturan`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `sarana`

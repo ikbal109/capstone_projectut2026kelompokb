@@ -7,28 +7,22 @@ $user_id = $_SESSION['user_id'];
 $errors  = [];
 $success = '';
 
-// ============ PROSES FORM ============
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
-    // ---------- UPDATE PROFIL (nama, username, no_hp) ----------
+    // ---------- UPDATE PROFIL ----------
     if ($action === 'update_profil') {
         $nama     = trim($_POST['nama_lengkap'] ?? '');
         $username = trim($_POST['username'] ?? '');
         $no_hp    = trim($_POST['no_hp'] ?? '');
 
-        if ($nama === '' || $username === '') {
-            $errors[] = 'Nama dan username wajib diisi.';
-        }
+        if ($nama === '' || $username === '') $errors[] = 'Nama dan username wajib diisi.';
 
-        // Cek username sudah dipakai orang lain?
         if (empty($errors)) {
             $cek = $conn->prepare("SELECT id FROM users WHERE username = ? AND id != ?");
             $cek->bind_param('si', $username, $user_id);
             $cek->execute();
-            if ($cek->get_result()->num_rows > 0) {
-                $errors[] = 'Username sudah dipakai.';
-            }
+            if ($cek->get_result()->num_rows > 0) $errors[] = 'Username sudah dipakai.';
         }
 
         if (empty($errors)) {
@@ -48,22 +42,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $baru  = $_POST['password_baru'] ?? '';
         $ulang = $_POST['password_ulang'] ?? '';
 
-        if ($lama === '' || $baru === '' || $ulang === '') {
-            $errors[] = 'Semua field password wajib diisi.';
-        }
-        if (strlen($baru) < 6) {
-            $errors[] = 'Password baru minimal 6 karakter.';
-        }
-        if ($baru !== $ulang) {
-            $errors[] = 'Konfirmasi password tidak cocok.';
-        }
+        if ($lama === '' || $baru === '' || $ulang === '') $errors[] = 'Semua field password wajib diisi.';
+        if (strlen($baru) < 6) $errors[] = 'Password baru minimal 6 karakter.';
+        if ($baru !== $ulang)  $errors[] = 'Konfirmasi password tidak cocok.';
 
-        // Cek password lama
         if (empty($errors)) {
             $row = $conn->query("SELECT password FROM users WHERE id=$user_id")->fetch_assoc();
-            if (!$row || !password_verify($lama, $row['password'])) {
-                $errors[] = 'Password lama salah.';
-            }
+            if (!$row || !password_verify($lama, $row['password'])) $errors[] = 'Password lama salah.';
         }
 
         if (empty($errors)) {
@@ -74,15 +59,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $success = 'Password berhasil diganti.';
         }
     }
+
+    // ---------- UPDATE REKENING ----------
+    if ($action === 'update_rekening') {
+        $bank    = trim($_POST['nama_bank'] ?? '');
+        $rek     = trim($_POST['nomor_rekening'] ?? '');
+        $pemilik = trim($_POST['nama_pemilik_rekening'] ?? '');
+        $catatan = trim($_POST['catatan_tunai'] ?? '');
+
+        if ($bank === '' || $rek === '' || $pemilik === '') {
+            $errors[] = 'Nama bank, nomor rekening, dan pemilik wajib diisi.';
+        }
+
+        if (empty($errors)) {
+            setPengaturan($conn, 'nama_bank', $bank);
+            setPengaturan($conn, 'nomor_rekening', $rek);
+            setPengaturan($conn, 'nama_pemilik_rekening', $pemilik);
+            setPengaturan($conn, 'catatan_tunai', $catatan);
+            $success = 'Pengaturan rekening berhasil disimpan.';
+        }
+    }
 }
 
-// ============ AMBIL DATA USER ============
 $user = $conn->query("SELECT * FROM users WHERE id=$user_id")->fetch_assoc();
 if (!$user) { session_destroy(); redirect(BASE_URL . '/pages/login.php'); }
 
-// Statistik aktivitas
 $totalVerif = $conn->query("SELECT COUNT(*) c FROM booking WHERE verified_by=$user_id")->fetch_assoc()['c'];
-$totalLogin = '-' ; // kalau ada tabel log, bisa diisi
+
+// Info pengaturan
+$namaBank     = getPengaturan($conn, 'nama_bank', 'Bank Kalsel');
+$noRekening   = getPengaturan($conn, 'nomor_rekening', '');
+$pemilikRek   = getPengaturan($conn, 'nama_pemilik_rekening', '');
+$catatanTunai = getPengaturan($conn, 'catatan_tunai', '');
 
 ob_start();
 ?>
@@ -102,7 +110,7 @@ ob_start();
 
 <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:20px;" class="profile-grid">
 
-  <!-- ============ KARTU KIRI: INFO AKUN ============ -->
+  <!-- KARTU KIRI -->
   <div>
     <div class="chart-card" style="text-align:center;">
       <div style="width:100px;height:100px;border-radius:50%;margin:0 auto 16px;
@@ -135,10 +143,10 @@ ob_start();
     </div>
   </div>
 
-  <!-- ============ KARTU KANAN: FORM ============ -->
+  <!-- KARTU KANAN -->
   <div>
 
-    <!-- Form Update Profil -->
+    <!-- Edit Profil -->
     <div class="chart-card" style="margin-bottom:20px;">
       <h3 style="margin-top:0;">✏️ Edit Profil</h3>
       <form method="POST">
@@ -164,11 +172,11 @@ ob_start();
       </form>
     </div>
 
-    <!-- Form Ganti Password -->
-    <div class="chart-card">
+    <!-- Ganti Password -->
+    <div class="chart-card" style="margin-bottom:20px;">
       <h3 style="margin-top:0;">🔒 Ganti Password</h3>
       <p style="color:#64748b;font-size:.88rem;margin-bottom:16px;">
-        Gunakan password yang kuat minimal 6 karakter. Kombinasikan huruf, angka, dan simbol.
+        Gunakan password yang kuat minimal 6 karakter.
       </p>
       <form method="POST">
         <input type="hidden" name="action" value="ganti_password">
@@ -187,6 +195,38 @@ ob_start();
           </div>
         </div>
         <button class="btn btn-primary">🔑 Ganti Password</button>
+      </form>
+    </div>
+
+    <!-- Rekening Bank -->
+    <div class="chart-card">
+      <h3 style="margin-top:0;">🏦 Pengaturan Rekening Pembayaran</h3>
+      <p style="color:#64748b;font-size:.88rem;margin-bottom:16px;">
+        Informasi ini akan ditampilkan ke penyewa yang memilih metode pembayaran <strong>Transfer Bank</strong>.
+      </p>
+      <form method="POST">
+        <input type="hidden" name="action" value="update_rekening">
+        <div class="form-group">
+          <label>Nama Bank *</label>
+          <input type="text" name="nama_bank" class="form-control" required
+                 value="<?= e($namaBank) ?>" placeholder="cth: Bank Kalsel">
+        </div>
+        <div class="form-group">
+          <label>Nomor Rekening *</label>
+          <input type="text" name="nomor_rekening" class="form-control" required
+                 value="<?= e($noRekening) ?>" placeholder="cth: 1234567890">
+        </div>
+        <div class="form-group">
+          <label>Nama Pemilik Rekening *</label>
+          <input type="text" name="nama_pemilik_rekening" class="form-control" required
+                 value="<?= e($pemilikRek) ?>" placeholder="cth: BPSDMD Provinsi Kalimantan Selatan">
+        </div>
+        <div class="form-group">
+          <label>Catatan Pembayaran Tunai</label>
+          <textarea name="catatan_tunai" class="form-control" rows="3"><?= e($catatanTunai) ?></textarea>
+          <small style="color:#64748b;">Ditampilkan ke penyewa yang memilih metode Tunai.</small>
+        </div>
+        <button class="btn btn-primary">💾 Simpan Rekening</button>
       </form>
     </div>
 

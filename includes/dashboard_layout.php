@@ -1,11 +1,6 @@
 <?php
 /**
  * Layout wrapper untuk dashboard admin.
- * 
- * Cara pakai:
- *   ob_start(); ...isi konten...; $content = ob_get_clean();
- *   $title = 'Dashboard'; $activeMenu = 'dashboard';
- *   require_once __DIR__ . '/../../includes/dashboard_layout.php';
  */
 
 if (!isset($content)) $content = '';
@@ -31,7 +26,6 @@ function menuItem($url, $icon, $label, $key, $activeMenu) {
 </head>
 <body class="dash-body">
 
-<!-- ============ SIDEBAR ============ -->
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-brand">
     <div class="logo-box">🏟️</div>
@@ -47,7 +41,7 @@ function menuItem($url, $icon, $label, $key, $activeMenu) {
     <div class="sidebar-section">Manajemen</div>
     <?php menuItem(BASE_URL . '/pages/admin/kelola_booking.php', '📅', 'Reservasi', 'reservasi', $activeMenu); ?>
     <?php menuItem(BASE_URL . '/pages/admin/kelola_sarana.php', '🏢', 'Fasilitas', 'fasilitas', $activeMenu); ?>
-    <?php menuItem(BASE_URL . '/pages/admin/kelola_diskon.php', '🎁', 'Diskon', 'diskon', $activeMenu); ?>
+    <?php menuItem(BASE_URL . '/pages/admin/laporan.php', '📈', 'Laporan', 'laporan', $activeMenu); ?>
 
     <div class="sidebar-section">Akun</div>
     <?php menuItem(BASE_URL . '/pages/admin/profile.php', '👤', 'Profile Saya', 'profile', $activeMenu); ?>
@@ -58,7 +52,6 @@ function menuItem($url, $icon, $label, $key, $activeMenu) {
   </nav>
 </aside>
 
-<!-- ============ MAIN AREA ============ -->
 <div class="main-area">
   <header class="topbar">
     <div style="display:flex;align-items:center;gap:14px;">

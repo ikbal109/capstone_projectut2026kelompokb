@@ -51,7 +51,7 @@ function generateKodeGambar($kode, $simpanDir = null) {
     return 'assets/booking_codes/' . $filename;
 }
 
-// Hitung harga + diskon
+// Hitung harga total
 function hitungTotal($conn, $sarana_id, $tanggal, $jam_mulai, $jam_selesai) {
     $s = $conn->query("SELECT harga_per_jam FROM sarana WHERE id=" . (int)$sarana_id)->fetch_assoc();
     $harga = (float)$s['harga_per_jam'];
@@ -61,17 +61,12 @@ function hitungTotal($conn, $sarana_id, $tanggal, $jam_mulai, $jam_selesai) {
     $durasi = max(1, (int)round(($t2 - $t1) / 3600));
 
     $subtotal = $harga * $durasi;
-    $diskon = getDiskonByTanggal($conn, $tanggal);
-    $persen = $diskon ? (float)$diskon['persen'] : 0;
-    $total = $subtotal - ($subtotal * $persen / 100);
 
     return [
         'harga_per_jam' => $harga,
         'durasi'        => $durasi,
         'subtotal'      => $subtotal,
-        'diskon'        => $diskon,
-        'persen'        => $persen,
-        'total'         => $total,
+        'total'         => $subtotal,
     ];
 }
 
@@ -143,4 +138,31 @@ function getGaleri($json) {
     if (empty($json)) return [];
     $arr = json_decode($json, true);
     return is_array($arr) ? $arr : [];
+}
+
+// ============ HELPER PENGATURAN ============
+function getPengaturan($conn, $kunci, $default = '') {
+    $stmt = $conn->prepare("SELECT nilai FROM pengaturan WHERE kunci=?");
+    $stmt->bind_param('s', $kunci);
+    $stmt->execute();
+    $r = $stmt->get_result()->fetch_assoc();
+    return $r ? $r['nilai'] : $default;
+}
+
+function setPengaturan($conn, $kunci, $nilai) {
+    $stmt = $conn->prepare("INSERT INTO pengaturan (kunci, nilai) VALUES (?, ?) 
+                            ON DUPLICATE KEY UPDATE nilai = VALUES(nilai)");
+    $stmt->bind_param('ss', $kunci, $nilai);
+    return $stmt->execute();
+}
+
+// Label status pembayaran
+function labelPembayaran($status) {
+    $map = [
+        'belum_bayar'         => ['#fef3c7', '#92400e', '💵 Belum Bayar'],
+        'menunggu_verifikasi' => ['#dbeafe', '#1e40af', '⏳ Menunggu Verifikasi'],
+        'berhasil'            => ['#dcfce7', '#166534', '✅ Berhasil'],
+        'gagal'               => ['#fee2e2', '#991b1b', '❌ Gagal'],
+    ];
+    return $map[$status] ?? ['#f1f5f9', '#64748b', $status];
 }

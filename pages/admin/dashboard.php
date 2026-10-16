@@ -4,13 +4,13 @@ require_once __DIR__ . '/../../includes/auth.php';
 requireRole('admin');
 
 // ============ QUERY STATISTIK ============
-$totalReservasi   = $conn->query("SELECT COUNT(*) c FROM booking")->fetch_assoc()['c'];
-$pendingCount     = $conn->query("SELECT COUNT(*) c FROM booking WHERE status='pending'")->fetch_assoc()['c'];
-$terverifikasi    = $conn->query("SELECT COUNT(*) c FROM booking WHERE status='terverifikasi'")->fetch_assoc()['c'];
-$selesaiCount     = $conn->query("SELECT COUNT(*) c FROM booking WHERE status='selesai'")->fetch_assoc()['c'];
-$totalPendapatan  = $conn->query("SELECT COALESCE(SUM(total_bayar),0) s FROM booking WHERE status IN ('terverifikasi','selesai')")->fetch_assoc()['s'];
+$totalReservasi  = $conn->query("SELECT COUNT(*) c FROM booking")->fetch_assoc()['c'];
+$pendingCount    = $conn->query("SELECT COUNT(*) c FROM booking WHERE status='pending'")->fetch_assoc()['c'];
+$terverifikasi   = $conn->query("SELECT COUNT(*) c FROM booking WHERE status='terverifikasi'")->fetch_assoc()['c'];
+$selesaiCount    = $conn->query("SELECT COUNT(*) c FROM booking WHERE status='selesai'")->fetch_assoc()['c'];
+$totalPendapatan = $conn->query("SELECT COALESCE(SUM(total_bayar),0) s FROM booking WHERE status IN ('terverifikasi','selesai')")->fetch_assoc()['s'];
 
-// ============ GRAFIK BULANAN (tahun ini) ============
+// GRAFIK BULANAN
 $monthlyRaw = $conn->query("
     SELECT MONTH(tanggal) AS bulan, COUNT(*) AS total
     FROM booking
@@ -22,7 +22,7 @@ while ($r = $monthlyRaw->fetch_assoc()) $monthly[(int)$r['bulan']] = (int)$r['to
 $maxMonthly = max(1, max($monthly));
 $bulanLabels = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
 
-// ============ KOMPOSISI FASILITAS ============
+// KOMPOSISI FASILITAS
 $komposisi = [];
 $kompRaw = $conn->query("
     SELECT s.jenis, COUNT(*) AS total
@@ -34,13 +34,10 @@ $kompRaw = $conn->query("
 while ($r = $kompRaw->fetch_assoc()) $komposisi[] = $r;
 $totalKomp = array_sum(array_column($komposisi, 'total'));
 
-// Warna untuk donut chart
 $palette = ['#166534', '#22c55e', '#facc15', '#f59e0b', '#3b82f6', '#8b5cf6', '#ef4444', '#ec4899'];
 
-// Hitung posisi donut (SVG stroke-dasharray)
 $donutSegments = [];
 if ($totalKomp > 0) {
-    $offset = 0;
     foreach ($komposisi as $i => $k) {
         $pct = ($k['total'] / $totalKomp) * 100;
         $donutSegments[] = [
@@ -48,15 +45,10 @@ if ($totalKomp > 0) {
             'total' => $k['total'],
             'pct'   => $pct,
             'warna' => $palette[$i % count($palette)],
-            'dash'  => ($pct * 100 / 100) . ' ' . (100 - $pct),
         ];
     }
 }
 
-// ============ BOOKING PENDING (untuk notif) ============
-$pendingList = $conn->query("SELECT COUNT(*) c FROM booking WHERE status='pending'")->fetch_assoc()['c'];
-
-// ============ BUILD CONTENT ============
 ob_start();
 ?>
 
@@ -65,7 +57,6 @@ ob_start();
   <p>Ringkasan informasi pengelolaan dan reservasi sarana olahraga</p>
 </div>
 
-<!-- ============ 4 STAT CARDS ============ -->
 <div class="stat-grid">
   <div class="stat-card green">
     <div class="stat-icon">📊</div>
@@ -96,7 +87,6 @@ ob_start();
   </div>
 </div>
 
-<!-- ============ TOTAL PENDAPATAN ============ -->
 <div class="income-card">
   <div>
     <div class="label">Total Pendapatan</div>
@@ -106,30 +96,27 @@ ob_start();
   <div class="income-icon">💰</div>
 </div>
 
-<!-- ============ NOTIF PENDING ============ -->
-<?php if ($pendingList > 0): ?>
+<?php if ($pendingCount > 0): ?>
 <div class="notif-card">
   <div class="notif-content">
     <div class="notif-icon">⚠️</div>
     <div>
       <div class="notif-title">Reservasi Menunggu Verifikasi</div>
       <div class="notif-desc">
-        Terdapat reservasi yang belum diverifikasi petugas.
+        Terdapat reservasi yang belum diverifikasi.
         <a href="<?= BASE_URL ?>/pages/admin/kelola_booking.php?status=pending" class="notif-link">Lihat Reservasi →</a>
       </div>
     </div>
   </div>
-  <div class="notif-count"><?= $pendingList ?></div>
+  <div class="notif-count"><?= $pendingCount ?></div>
 </div>
 <?php endif; ?>
 
-<!-- ============ CHART GRID ============ -->
 <div class="chart-grid">
-  <!-- Bar Chart: Reservasi Bulanan -->
   <div class="chart-card">
     <h3>📊 Grafik Reservasi Bulanan (<?= date('Y') ?>)</h3>
     <div style="position:relative;padding-left:20px;">
-      <span class="chart-y-title"></span>
+      <span class="chart-y-title">Jumlah Reservasi</span>
       <div class="bar-chart">
         <?php foreach ($monthly as $bulan => $jumlah): 
           $height = $jumlah > 0 ? max(6, ($jumlah / $maxMonthly) * 160) : 3;
@@ -146,7 +133,6 @@ ob_start();
     </div>
   </div>
 
-  <!-- Donut Chart: Komposisi Fasilitas -->
   <div class="chart-card">
     <h3>🥧 Komposisi Fasilitas</h3>
     <?php if ($totalKomp === 0): ?>
@@ -155,19 +141,15 @@ ob_start();
       <div class="donut-wrap">
         <svg class="donut-svg" viewBox="0 0 42 42">
           <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#f1f5f9" stroke-width="6"></circle>
-          <?php 
-          $cumOffset = 25; // start di atas
+          <?php $cumOffset = 25;
           foreach ($donutSegments as $seg):
             $dashLen = $seg['pct'];
-            $gapLen  = 100 - $dashLen;
-          ?>
+            $gapLen  = 100 - $dashLen; ?>
             <circle cx="21" cy="21" r="15.915" fill="transparent"
                     stroke="<?= $seg['warna'] ?>" stroke-width="6"
                     stroke-dasharray="<?= $dashLen ?> <?= $gapLen ?>"
                     stroke-dashoffset="<?= $cumOffset ?>"></circle>
-          <?php 
-            $cumOffset -= $dashLen;
-          endforeach; ?>
+          <?php $cumOffset -= $dashLen; endforeach; ?>
           <text x="21" y="20" text-anchor="middle" font-size="4" font-weight="700" fill="#0f172a"><?= $totalKomp ?></text>
           <text x="21" y="25" text-anchor="middle" font-size="2" fill="#64748b">Total</text>
         </svg>

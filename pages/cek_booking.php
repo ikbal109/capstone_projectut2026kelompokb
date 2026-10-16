@@ -7,7 +7,6 @@ $hasil   = [];
 $error   = '';
 
 if ($keyword !== '') {
-    // Cari berdasarkan kode booking ATAU no HP
     $stmt = $conn->prepare("
         SELECT b.*, s.nama AS sarana, s.jenis AS jenis_sarana, s.gambar AS gambar_sarana
         FROM booking b
@@ -33,11 +32,18 @@ require_once __DIR__ . '/../includes/header.php';
     <p style="color:#64748b;">Masukkan kode booking atau nomor HP yang kamu gunakan saat memesan.</p>
   </div>
 
+  <?php if ($m = flash('msg')): ?>
+    <div class="alert alert-success"><?= e($m) ?></div>
+  <?php endif; ?>
+  <?php if ($m = flash('err')): ?>
+    <div class="alert alert-danger"><?= e($m) ?></div>
+  <?php endif; ?>
+
   <form method="GET" style="background:#fff;padding:24px;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.06);">
     <div class="form-group">
       <label>Kode Booking / No. HP</label>
       <input type="text" name="q" class="form-control" 
-             placeholder="Contoh: BKG-240922-A1B2C  atau  081234567890"
+             placeholder="Contoh: BKG-261014-A1B2C  atau  081234567890"
              value="<?= e($keyword) ?>" required autofocus>
     </div>
     <button class="btn btn-primary btn-block">Cari Booking</button>
@@ -52,7 +58,6 @@ require_once __DIR__ . '/../includes/header.php';
 
     <?php foreach ($hasil as $b): ?>
       <?php
-        // Tentukan warna & label status
         $statusMap = [
           'pending'       => ['badge-warning', '⏳ Menunggu Verifikasi'],
           'terverifikasi' => ['badge-success', '✅ Terverifikasi'],
@@ -61,12 +66,15 @@ require_once __DIR__ . '/../includes/header.php';
           'batal'         => ['badge-danger',  '🚫 Dibatalkan'],
         ];
         [$badgeClass, $badgeLabel] = $statusMap[$b['status']] ?? ['badge-warning', $b['status']];
+
+        [$pbg, $pcolor, $plabel] = labelPembayaran($b['status_pembayaran'] ?? 'belum_bayar');
+        $isTransfer = ($b['metode_pembayaran'] ?? '') === 'transfer';
       ?>
 
       <div class="card" style="margin-top:20px;padding:0;">
         <div style="display:grid;grid-template-columns:1fr;gap:0;">
 
-          <!-- Header Card -->
+          <!-- Header -->
           <div style="background:#166534;color:#fff;padding:16px 20px;border-radius:12px 12px 0 0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
             <div>
               <div style="font-size:.85rem;opacity:.85;">Kode Booking</div>
@@ -78,18 +86,15 @@ require_once __DIR__ . '/../includes/header.php';
           <!-- Body -->
           <div style="padding:20px;">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-
               <div>
                 <div style="font-size:.8rem;color:#64748b;text-transform:uppercase;letter-spacing:.5px;">Sarana</div>
                 <div style="font-weight:600;"><?= e($b['sarana']) ?></div>
                 <span class="badge badge-info" style="margin-top:4px;"><?= e($b['jenis_sarana']) ?></span>
               </div>
-
               <div>
                 <div style="font-size:.8rem;color:#64748b;text-transform:uppercase;letter-spacing:.5px;">Tanggal</div>
                 <div style="font-weight:600;"><?= date('d F Y', strtotime($b['tanggal'])) ?></div>
               </div>
-
               <div>
                 <div style="font-size:.8rem;color:#64748b;text-transform:uppercase;letter-spacing:.5px;">Waktu</div>
                 <div style="font-weight:600;">
@@ -97,7 +102,6 @@ require_once __DIR__ . '/../includes/header.php';
                   <span style="color:#64748b;font-weight:400;">(<?= $b['durasi_jam'] ?> jam)</span>
                 </div>
               </div>
-
               <div>
                 <div style="font-size:.8rem;color:#64748b;text-transform:uppercase;letter-spacing:.5px;">Atas Nama</div>
                 <div style="font-weight:600;"><?= e($b['nama_penyewa']) ?></div>
@@ -115,14 +119,7 @@ require_once __DIR__ . '/../includes/header.php';
                   <td style="padding:4px 0;color:#64748b;">Subtotal (<?= $b['durasi_jam'] ?> jam)</td>
                   <td style="text-align:right;">Rp <?= number_format($b['subtotal'],0,',','.') ?></td>
                 </tr>
-                <?php if ($b['diskon_persen'] > 0): ?>
-                <tr>
-                  <td style="padding:4px 0;color:#16a34a;">Diskon (<?= (int)$b['diskon_persen'] ?>%)</td>
-                  <td style="text-align:right;color:#16a34a;">
-                    - Rp <?= number_format($b['subtotal'] * $b['diskon_persen'] / 100, 0, ',', '.') ?>
-                  </td>
-                </tr>
-                <?php endif; ?>
+                
                 <tr style="border-top:1px solid #e2e8f0;">
                   <td style="padding:8px 0;font-weight:700;font-size:1rem;">Total Bayar</td>
                   <td style="text-align:right;font-weight:700;font-size:1.1rem;color:#166534;">
@@ -130,6 +127,62 @@ require_once __DIR__ . '/../includes/header.php';
                   </td>
                 </tr>
               </table>
+            </div>
+
+            <!-- ====== STATUS PEMBAYARAN ====== -->
+            <div style="margin-top:20px;padding:16px;background:<?= $pbg ?>;border-radius:10px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                <div>
+                  <div style="font-size:.8rem;color:#64748b;text-transform:uppercase;letter-spacing:.5px;">Status Pembayaran</div>
+                  <div style="font-weight:700;color:<?= $pcolor ?>;font-size:1.05rem;"><?= $plabel ?></div>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-size:.8rem;color:#64748b;text-transform:uppercase;letter-spacing:.5px;">Metode</div>
+                  <div style="font-weight:700;">
+                    <?= $isTransfer ? '🏦 Transfer Bank' : ($b['metode_pembayaran'] === 'tunai' ? '💵 Tunai' : '—') ?>
+                  </div>
+                </div>
+              </div>
+
+              <?php if ($b['catatan_pembayaran']): ?>
+                <div style="margin-top:10px;padding:10px;background:#fff;border-radius:6px;font-size:.88rem;">
+                  <strong>📝 Catatan Admin:</strong> <?= nl2br(e($b['catatan_pembayaran'])) ?>
+                </div>
+              <?php endif; ?>
+
+              <?php if ($isTransfer && in_array($b['status_pembayaran'], ['belum_bayar','gagal'])): ?>
+                <div style="margin-top:14px;padding-top:14px;border-top:1px dashed rgba(0,0,0,.15);">
+                  <div style="font-weight:600;margin-bottom:8px;">📤 Upload Bukti Transfer</div>
+                  <form action="<?= BASE_URL ?>/api/upload_bukti.php" method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="kode_booking" value="<?= e($b['kode_booking']) ?>">
+                    <input type="hidden" name="no_hp" value="<?= e($b['no_hp']) ?>">
+                    <input type="file" name="bukti" class="form-control" 
+                           accept="image/*,.pdf" required
+                           style="margin-bottom:10px;background:#fff;">
+                    <small style="color:#64748b;display:block;margin-bottom:10px;">
+                      Format: JPG, PNG, WEBP, atau PDF. Maks 5 MB.
+                    </small>
+                    <button class="btn btn-primary btn-sm">📤 Upload Bukti</button>
+                  </form>
+                </div>
+              <?php endif; ?>
+
+              <?php if ($isTransfer && $b['status_pembayaran'] === 'menunggu_verifikasi' && !empty($b['bukti_transfer'])): ?>
+                <div style="margin-top:14px;padding-top:14px;border-top:1px dashed rgba(0,0,0,.15);">
+                  <div style="font-weight:600;margin-bottom:8px;">🧾 Bukti Transfer Terkirim</div>
+                  <img src="<?= BASE_URL . '/' . e($b['bukti_transfer']) ?>" 
+                       style="max-width:240px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.1);">
+                  <div style="font-size:.85rem;color:#64748b;margin-top:6px;">
+                    Menunggu verifikasi admin (1x24 jam)
+                  </div>
+                </div>
+              <?php endif; ?>
+
+              <?php if (!$isTransfer && $b['status_pembayaran'] === 'belum_bayar'): ?>
+                <div style="margin-top:10px;font-size:.88rem;color:#78350f;">
+                  💵 Silakan bayar tunai di kantor BPSDMD Provinsi Kalimantan Selatan.
+                </div>
+              <?php endif; ?>
             </div>
 
             <!-- Catatan Petugas -->
@@ -140,23 +193,22 @@ require_once __DIR__ . '/../includes/header.php';
               </div>
             <?php endif; ?>
 
-            <!-- Kode Booking Gambar -->
+            <!-- Gambar Kode Booking -->
             <?php if ($b['status'] === 'terverifikasi' && $b['kode_gambar']): ?>
               <div style="margin-top:20px;text-align:center;background:#f0fdf4;padding:16px;border-radius:8px;">
                 <p style="margin-bottom:12px;color:#166534;font-weight:600;">
                   ✅ Booking terverifikasi — tunjukkan gambar ini saat check-in
                 </p>
-                <img src="<?= BASE_URL . '/' . e($b['kode_gambar']) ?>" alt="Kode Booking" 
-                  style="max-width:100%;border-radius:8px;">
+                <img src="<?= BASE_URL . '/' . e($b['kode_gambar']) ?>" 
+                     style="max-width:300px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.1);">
                 <div style="margin-top:12px;">
                   <a href="<?= BASE_URL . '/' . e($b['kode_gambar']) ?>" 
-                    download="kode-<?= e($b['kode_booking']) ?>.svg" 
-                    class="btn btn-accent">⬇️ Download Kode</a>
+                     download="kode-<?= e($b['kode_booking']) ?>.svg" 
+                     class="btn btn-accent btn-sm">⬇️ Download Gambar</a>
                 </div>
               </div>
             <?php endif; ?>
 
-            <!-- Info untuk status pending -->
             <?php if ($b['status'] === 'pending'): ?>
               <div class="alert alert-info" style="margin-top:16px;margin-bottom:0;font-size:.9rem;">
                 ℹ️ Booking kamu sedang menunggu verifikasi petugas. Simpan kode booking 
@@ -178,7 +230,6 @@ require_once __DIR__ . '/../includes/header.php';
       <a href="cek_booking.php" class="btn btn-primary">🔄 Cari Lagi</a>
     </div>
   <?php endif; ?>
-
 </div>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
