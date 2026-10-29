@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$nama || !$no_hp || !$tanggal || !$jam_mulai || !$jam_selesai) $errors[] = 'Semua field wajib diisi.';
     if (strtotime($tanggal) < strtotime(date('Y-m-d'))) $errors[] = 'Tanggal tidak boleh di masa lalu.';
     if (strtotime($jam_selesai) <= strtotime($jam_mulai)) $errors[] = 'Jam selesai harus lebih dari jam mulai.';
-    if (!in_array($metode, ['tunai','transfer'])) $errors[] = 'Pilih metode pembayaran.';
+    if (!in_array($metode, ['qris','transfer'])) $errors[] = 'Pilih metode pembayaran.';
 
     if (empty($errors)) {
         $stmt = $conn->prepare("SELECT id FROM booking WHERE sarana_id=? AND tanggal=? AND status IN ('pending','terverifikasi') AND (jam_mulai < ? AND jam_selesai > ?)");
@@ -72,9 +72,7 @@ require_once __DIR__ . '/../includes/header.php';
   <!-- KALENDER -->
   <div class="card" style="padding:20px;margin-bottom:20px;">
     <h3 style="margin-bottom:6px;">📅 Ketersediaan 30 Hari ke Depan</h3>
-    <p style="color:#64748b;font-size:.9rem;margin-bottom:16px;">
-      Klik tanggal untuk melihat jam yang tersedia.
-    </p>
+    <p style="color:#64748b;font-size:.9rem;margin-bottom:16px;">Klik tanggal untuk melihat jam yang tersedia.</p>
     <div id="kalender" style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;">
       <div style="text-align:center;font-size:.8rem;font-weight:700;color:#64748b;padding:6px;">Sen</div>
       <div style="text-align:center;font-size:.8rem;font-weight:700;color:#64748b;padding:6px;">Sel</div>
@@ -113,29 +111,34 @@ require_once __DIR__ . '/../includes/header.php';
       <input type="email" name="email" class="form-control" value="<?= e($_POST['email']??'') ?>"></div>
     <div class="form-group"><label>Instansi/Asal</label>
       <input type="text" name="instansi" class="form-control" value="<?= e($_POST['instansi']??'') ?>"></div>
-    <div class="form-group"><label>Tanggal *</label>
-      <input type="date" name="tanggal" id="input-tanggal" class="form-control" required 
-             min="<?= date('Y-m-d') ?>" value="<?= e($_POST['tanggal']??date('Y-m-d')) ?>"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-      <div class="form-group"><label>Jam Mulai *</label>
-        <input type="time" name="jam_mulai" id="input-mulai" class="form-control" required value="<?= e($_POST['jam_mulai']??'08:00') ?>"></div>
-      <div class="form-group"><label>Jam Selesai *</label>
-        <input type="time" name="jam_selesai" id="input-selesai" class="form-control" required value="<?= e($_POST['jam_selesai']??'10:00') ?>"></div>
+    
+    <!-- INPUT TANGGAL & JAM DISEMBUNYIKAN KARENA SUDAH ADA DI KALENDER -->
+    <div style="display:none;">
+      <input type="date" name="tanggal" id="input-tanggal" required min="<?= date('Y-m-d') ?>" value="<?= e($_POST['tanggal']??date('Y-m-d')) ?>">
+      <input type="time" name="jam_mulai" id="input-mulai" required value="<?= e($_POST['jam_mulai']??'08:00') ?>">
+      <input type="time" name="jam_selesai" id="input-selesai" required value="<?= e($_POST['jam_selesai']??'10:00') ?>">
+    </div>
+    
+    <!-- TAMPILAN INFO TANGGAL TERPILIH (Opsional agar user tetap tahu) -->
+    <div style="background:#f8fafc; padding:12px; border-radius:8px; margin-bottom:20px; font-size:0.9rem; border:1px solid #e2e8f0;">
+      <strong>Jadwal Terpilih:</strong> <br>
+      <span id="info-tanggal" style="color:#166534;"></span> <br>
+      <span id="info-jam" style="color:#166534;"></span>
     </div>
 
-    <!-- METODE PEMBAYARAN -->
+    <!-- METODE PEMBAYARAN (QRIS / TRANSFER) -->
     <div class="form-group">
       <label>Metode Pembayaran *</label>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px;">
         <label class="metode-card" style="cursor:pointer;padding:14px;border:2px solid #e2e8f0;border-radius:10px;transition:.2s;">
-          <input type="radio" name="metode_pembayaran" value="tunai" required style="margin-right:8px;">
-          <strong>💵 Tunai</strong>
-          <div style="font-size:.82rem;color:#64748b;margin-top:4px;margin-left:22px;">Bayar langsung di kantor</div>
+          <input type="radio" name="metode_pembayaran" value="qris" required style="margin-right:8px;">
+          <strong>📱 QRIS</strong>
+          <div style="font-size:.82rem;color:#64748b;margin-top:4px;margin-left:22px;">Scan QRIS & upload bukti</div>
         </label>
         <label class="metode-card" style="cursor:pointer;padding:14px;border:2px solid #e2e8f0;border-radius:10px;transition:.2s;">
           <input type="radio" name="metode_pembayaran" value="transfer" style="margin-right:8px;">
           <strong>🏦 Transfer Bank</strong>
-          <div style="font-size:.82rem;color:#64748b;margin-top:4px;margin-left:22px;">Transfer + upload bukti</div>
+          <div style="font-size:.82rem;color:#64748b;margin-top:4px;margin-left:22px;">Transfer & upload bukti</div>
         </label>
       </div>
     </div>
@@ -145,65 +148,43 @@ require_once __DIR__ . '/../includes/header.php';
 </div>
 
 <style>
-.metode-card:has(input:checked) {
-  border-color: #166534 !important;
-  background: #f0fdf4;
-}
+.metode-card:has(input:checked) { border-color: #166534 !important; background: #f0fdf4; }
 </style>
 
 <script>
 const SARANA_ID = <?= (int)$sarana_id ?>;
 const BASE = '<?= BASE_URL ?>';
 
-// ================= HELPER TANGGAL (FIX TIMEZONE) =================
-// JANGAN pakai toISOString() karena mengubah ke UTC dan bisa geser hari
 function tanggalKeISO(d) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 function formatTanggal(iso) {
   const d = new Date(iso + 'T00:00:00');
-  const hari = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
   const bulan = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-  return `${hari[d.getDay()]}, ${d.getDate()} ${bulan[d.getMonth()]} ${d.getFullYear()}`;
+  return `${d.getDate()} ${bulan[d.getMonth()]} ${d.getFullYear()}`;
 }
 
-function hitungJamPlus(jam, plus) {
-  const h = parseInt(jam.split(':')[0]) + plus;
-  return String(h).padStart(2, '0') + ':00';
-}
-
-// ================= KALENDER =================
 async function loadKalender() {
   const res = await fetch(`${BASE}/api/ketersediaan.php?sarana_id=${SARANA_ID}&mode=bulan`);
   const data = await res.json();
-
   const container = document.getElementById('kalender-hari');
   container.innerHTML = '';
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-
-  // Cari Senin di minggu ini
   let firstDay = new Date(today);
-  const offset = (today.getDay() + 6) % 7; // Senin = 0
+  const offset = (today.getDay() + 6) % 7;
   firstDay.setDate(today.getDate() - offset);
 
-  // Kosongkan hari sebelum hari ini
-  for (let i = 0; i < offset; i++) {
-    container.innerHTML += '<div></div>';
-  }
+  for (let i = 0; i < offset; i++) container.innerHTML += '<div></div>';
 
-  // 42 sel = 6 minggu
   for (let i = 0; i < 42; i++) {
     const d = new Date(firstDay);
     d.setDate(firstDay.getDate() + i);
     d.setHours(0, 0, 0, 0);
 
-    const iso = tanggalKeISO(d);           // ← FIX: pakai helper, bukan toISOString()
+    const iso = tanggalKeISO(d);
     const isPast = d < today;
     const jumlah = data[iso] || 0;
 
@@ -213,135 +194,91 @@ async function loadKalender() {
     const div = document.createElement('div');
     div.dataset.tanggal = iso;
     div.style.cssText = `padding:10px 4px;text-align:center;border-radius:8px;background:${bg};color:${color};font-size:.85rem;cursor:${isPast?'not-allowed':'pointer'};border:2px solid transparent;transition:.2s;`;
-    div.innerHTML = `<div style="font-weight:700;">${d.getDate()}</div>
-                     <div style="font-size:.7rem;">${isPast?'-':(jumlah===0?'kosong':jumlah+' jam')}</div>`;
+    div.innerHTML = `<div style="font-weight:700;">${d.getDate()}</div><div style="font-size:.7rem;">${isPast?'-':(jumlah===0?'kosong':jumlah+' jam')}</div>`;
 
     if (!isPast) {
       div.onmouseover = () => div.style.borderColor = '#166534';
-      div.onmouseout = () => {
-        if (div.dataset.tanggal !== document.getElementById('input-tanggal').value) {
-          div.style.borderColor = 'transparent';
-        } else {
-          div.style.borderColor = '#166534';
-        }
-      };
+      div.onmouseout = () => { if (div.dataset.tanggal !== document.getElementById('input-tanggal').value) div.style.borderColor = 'transparent'; else div.style.borderColor = '#166534'; };
       div.onclick = () => pilihTanggal(iso);
     }
     container.appendChild(div);
   }
-
   tandaiTanggalAktif(document.getElementById('input-tanggal').value);
 }
 
 function tandaiTanggalAktif(iso) {
   document.querySelectorAll('#kalender-hari > div').forEach(el => {
     if (el.dataset.tanggal === iso) {
-      el.style.borderColor = '#166534';
-      el.style.boxShadow = '0 0 0 2px rgba(22,101,52,.25)';
+      el.style.borderColor = '#166534'; el.style.boxShadow = '0 0 0 2px rgba(22,101,52,.25)';
     } else if (!el.style.cursor || el.style.cursor !== 'not-allowed') {
-      el.style.borderColor = 'transparent';
-      el.style.boxShadow = 'none';
+      el.style.borderColor = 'transparent'; el.style.boxShadow = 'none';
     }
   });
+  document.getElementById('info-tanggal').textContent = formatTanggal(iso);
 }
 
-// ================= STATE SLOT JAM =================
-const slotState = {
-  start: null,       // "08:00"
-  end: null,         // "11:00" (belum termasuk, jam selesai = end+1)
-  tombol: [],        // referensi ke semua button
-};
+const slotState = { start: null, end: null, tombol: [] };
 
 function resetSlotVisual() {
   slotState.tombol.forEach(btn => {
     if (btn.disabled) return;
-    btn.style.background = '#f0fdf4';
-    btn.style.color = '#166534';
-    btn.style.borderColor = '#bbf7d0';
-    btn.style.fontWeight = '600';
-    btn.style.boxShadow = 'none';
+    btn.style.background = '#f0fdf4'; btn.style.color = '#166534';
+    btn.style.borderColor = '#bbf7d0'; btn.style.fontWeight = '600'; btn.style.boxShadow = 'none';
   });
 }
 
 function terapkanRange() {
   resetSlotVisual();
-
   const s = slotState.start;
   const e = slotState.end;
 
-  if (!s) {
-    document.getElementById('range-info').style.display = 'none';
-    return;
-  }
+  if (!s) { document.getElementById('range-info').style.display = 'none'; return; }
 
   slotState.tombol.forEach(btn => {
     if (btn.disabled) return;
     const j = btn.dataset.jam;
 
     if (e) {
-      // Range lengkap
-      if (j >= s && j < e) {
-        btn.style.background = '#166534';
-        btn.style.color = '#fff';
-        btn.style.borderColor = '#166534';
+      // PERBAIKAN: Menggunakan <= agar jam selesai juga ikut menyala
+      if (j >= s && j <= e) {
+        btn.style.background = '#166534'; btn.style.color = '#fff'; btn.style.borderColor = '#166534';
       }
       if (j === s) btn.style.boxShadow = '0 0 0 2px #facc15';
     } else {
-      // Hanya start
       if (j === s) {
-        btn.style.background = '#166534';
-        btn.style.color = '#fff';
-        btn.style.borderColor = '#166534';
-        btn.style.boxShadow = '0 0 0 2px #facc15';
+        btn.style.background = '#166534'; btn.style.color = '#fff'; btn.style.borderColor = '#166534'; btn.style.boxShadow = '0 0 0 2px #facc15';
       }
     }
   });
 
-  // Update input
   document.getElementById('input-mulai').value = s;
-  if (e) document.getElementById('input-selesai').value = hitungJamPlus(e, 1);
+  if (e) document.getElementById('input-selesai').value = e; 
 
-  // Info text
   const info = document.getElementById('range-info');
   const text = document.getElementById('range-text');
   info.style.display = 'block';
 
   if (e) {
     const durasi = parseInt(e.split(':')[0]) - parseInt(s.split(':')[0]);
-    text.textContent = `${s} - ${hitungJamPlus(e, 1)} (${durasi} jam)`;
+    text.textContent = `${s} - ${e} (${durasi} jam)`; 
+    document.getElementById('info-jam').textContent = `${s} - ${e} (${durasi} jam)`;
   } else {
     text.textContent = `Mulai ${s} — pilih jam selesai`;
+    document.getElementById('info-jam').textContent = `Mulai ${s} — pilih jam selesai`;
   }
 }
 
 function onSlotClick(jam) {
-  if (!slotState.start) {
-    // Klik pertama → set start
-    slotState.start = jam;
-    slotState.end = null;
-  } else if (slotState.end) {
-    // Sudah ada range → reset, klik baru jadi start
-    slotState.start = jam;
-    slotState.end = null;
-  } else {
-    // Klik kedua
-    if (jam === slotState.start) {
-      // Klik tombol sama → batal
-      slotState.start = null;
-      slotState.end = null;
-    } else if (jam < slotState.start) {
-      // Klik mundur → tukar: yang lama jadi end, yang baru jadi start
-      slotState.end = slotState.start;
-      slotState.start = jam;
-    } else {
-      // Klik maju → set end
-      slotState.end = jam;
-    }
+  if (!slotState.start) { slotState.start = jam; slotState.end = null; }
+  else if (slotState.end) { slotState.start = jam; slotState.end = null; }
+  else {
+    if (jam === slotState.start) { slotState.start = null; slotState.end = null; }
+    else if (jam < slotState.start) { slotState.end = slotState.start; slotState.start = jam; }
+    else { slotState.end = jam; }
   }
   terapkanRange();
 }
 
-// ================= LOAD SLOT JAM PER TANGGAL =================
 async function pilihTanggal(tanggal) {
   document.getElementById('input-tanggal').value = tanggal;
   tandaiTanggalAktif(tanggal);
@@ -353,71 +290,24 @@ async function pilihTanggal(tanggal) {
   const data = await res.json();
 
   const grid = document.getElementById('slot-grid');
-  grid.innerHTML = '';
-  slotState.start = null;
-  slotState.end = null;
-  slotState.tombol = [];
+  grid.innerHTML = ''; slotState.start = null; slotState.end = null; slotState.tombol = [];
 
   const bookedList = data.booked || [];
-  info.innerHTML = `<strong>${formatTanggal(tanggal)}</strong> — Klik jam mulai, lalu klik jam selesai.`;
+  info.innerHTML = `Klik jam mulai, lalu klik jam selesai.`;
 
   for (let jam = 7; jam <= 21; jam++) {
     const slotMulai = String(jam).padStart(2, '0') + ':00';
     const terisi = bookedList.includes(slotMulai);
 
     const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.textContent = slotMulai;
-    btn.dataset.jam = slotMulai;
-    btn.disabled = terisi;
-    btn.style.cssText = `padding:10px;border-radius:8px;border:2px solid ${terisi?'#fecaca':'#bbf7d0'};
-      background:${terisi?'#fee2e2':'#f0fdf4'};color:${terisi?'#991b1b':'#166534'};
-      font-weight:600;cursor:${terisi?'not-allowed':'pointer'};transition:.15s;`;
+    btn.type = 'button'; btn.textContent = slotMulai; btn.dataset.jam = slotMulai; btn.disabled = terisi;
+    btn.style.cssText = `padding:10px;border-radius:8px;border:2px solid ${terisi?'#fecaca':'#bbf7d0'};background:${terisi?'#fee2e2':'#f0fdf4'};color:${terisi?'#991b1b':'#166534'};font-weight:600;cursor:${terisi?'not-allowed':'pointer'};transition:.15s;`;
 
-    if (!terisi) {
-      btn.onclick = () => onSlotClick(slotMulai);
-    }
-    grid.appendChild(btn);
-    slotState.tombol.push(btn);
+    if (!terisi) btn.onclick = () => onSlotClick(slotMulai);
+    grid.appendChild(btn); slotState.tombol.push(btn);
   }
 }
 
-// ================= SINKRONISASI INPUT MANUAL =================
-document.getElementById('input-mulai').addEventListener('change', (e) => {
-  const val = e.target.value;
-  // Cari slot yang cocok
-  const found = slotState.tombol.find(b => b.dataset.jam === val && !b.disabled);
-  if (found) {
-    slotState.start = val;
-    slotState.end = null;
-    terapkanRange();
-  } else {
-    slotState.start = null;
-    slotState.end = null;
-    resetSlotVisual();
-    document.getElementById('range-info').style.display = 'none';
-  }
-});
-
-document.getElementById('input-selesai').addEventListener('change', (e) => {
-  const val = e.target.value; // jam selesai (exclusive), misal 11:00
-  if (!slotState.start) return;
-
-  // Slot end = jam selesai - 1
-  const endJam = String(parseInt(val.split(':')[0]) - 1).padStart(2, '0') + ':00';
-  const endOk = slotState.tombol.find(b => b.dataset.jam === endJam && !b.disabled);
-
-  if (endOk && endJam > slotState.start) {
-    slotState.end = endJam;
-    terapkanRange();
-  }
-});
-
-document.getElementById('input-tanggal').addEventListener('change', e => {
-  if (e.target.value) pilihTanggal(e.target.value);
-});
-
-// ================= INIT =================
 loadKalender();
 pilihTanggal(document.getElementById('input-tanggal').value);
 </script>

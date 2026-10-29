@@ -10,15 +10,25 @@ $err = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
-    // ---------- HAPUS ----------
+        // ---------- HAPUS ----------
     if ($action === 'hapus') {
         $id = (int)$_POST['id'];
-        $s = $conn->query("SELECT gambar, galeri FROM sarana WHERE id=$id")->fetch_assoc();
-        if ($s) {
-            hapusGambar($s['gambar']);
-            foreach (getGaleri($s['galeri']) as $g) hapusGambar($g);
-            $conn->query("DELETE FROM sarana WHERE id=$id");
-            flash('msg', 'Sarana berhasil dihapus.');
+        
+        // Cek apakah sarana ini sudah ada riwayat booking-nya
+        $cek_booking = $conn->query("SELECT id FROM booking WHERE sarana_id = $id LIMIT 1");
+        
+        if ($cek_booking->num_rows > 0) {
+            // Jika ada, tolak hapus
+            flash('err', 'Gagal menghapus! Sarana ini sudah memiliki riwayat pemesanan. Silakan ubah status menjadi "Maintenance" jika ingin menonaktifkannya.');
+        } else {
+            // Jika belum ada booking, izinkan hapus
+            $s = $conn->query("SELECT gambar, galeri FROM sarana WHERE id=$id")->fetch_assoc();
+            if ($s) {
+                hapusGambar($s['gambar']);
+                foreach (getGaleri($s['galeri']) as $g) hapusGambar($g);
+                $conn->query("DELETE FROM sarana WHERE id=$id");
+                flash('msg', 'Sarana berhasil dihapus secara permanen.');
+            }
         }
         redirect(BASE_URL . '/pages/admin/kelola_sarana.php');
     }

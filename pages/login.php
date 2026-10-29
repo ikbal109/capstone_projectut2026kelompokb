@@ -28,87 +28,72 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Login Admin — BPSDMD Kalsel</title>
+<title>Login Admin — SIPASTRA</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/login.css">
 </head>
-<body class="login-body">
+<body class="login-page">
+
+  <!-- BACKGROUND FULL -->
+  <div class="bg-image" style="background-image: url('<?= BASE_URL ?>/assets/img/bg-login.png');"></div>
+  <div class="bg-overlay"></div>
 
   <div class="login-wrapper">
-
-    <!-- ============ SISI KIRI: BRANDING ============ -->
+    
+    <!-- SISI KIRI: BRANDING -->
     <div class="login-hero">
-      <div class="hero-logo">
-        <span class="logo-emoji">🏟️</span>
-      </div>
+      <!-- Logo -->
+      <img src="<?= BASE_URL ?>/assets/img/loggoo.png" alt="Logo SIPASTRA" class="hero-logo-img">
+      
+      <h1 class="hero-title">SIPASTRA</h1>
+      <p class="hero-subtitle">Sistem Informasi Pengelolaan dan Reservasi<br>Sarana Olahraga</p>
 
-      <h1 class="hero-title">
-        Sistem Informasi Pengelolaan dan Reservasi
-        <span class="highlight">Sarana Olahraga</span>
-      </h1>
-
-      <p class="hero-subtitle">
-        Badan Pengembangan Sumber Daya Manusia Daerah<br>
-        Provinsi Kalimantan Selatan
-      </p>
-
-      <div class="hero-badge">
-        <span class="dot"></span>
-        Sistem Reservasi Online
+      <!-- Ikon Cabang Olahraga -->
+      <div class="hero-sports">
+        <div class="sport-item">
+          <div class="sport-icon">⚽</div>
+          <span>LAPANGAN<br>FUTSAL</span>
+        </div>
+        <div class="sport-divider"></div>
+        <div class="sport-item">
+          <div class="sport-icon">🎾</div>
+          <span>LAPANGAN<br>TENIS</span>
+        </div>
       </div>
     </div>
 
-    <!-- ============ SISI KANAN: FORM LOGIN ============ -->
+    <!-- SISI KANAN: FORM LOGIN -->
     <div class="login-form-wrap">
       <div class="login-card">
-
+        
         <div class="login-card-header">
-          <p class="small-title">
-            Sistem Informasi Pengelolaan dan Reservasi<br>Sarana Olahraga
-          </p>
-          <h1>Login <span class="highlight">Admin</span></h1>
-          <div class="login-card-divider"></div>
+          <h2 class="card-brand">SIPASTRA<span>.</span></h2>
+          <p class="card-sub">Sistem Informasi Pengelolaan dan Reservasi<br>Sarana Olahraga</p>
+          <h3 class="card-title">Login Admin</h3>
         </div>
 
         <?php if ($err): ?>
-          <div class="login-alert danger">
-            <span>⚠️</span>
-            <span><?= e($err) ?></span>
-          </div>
-        <?php endif; ?>
-
-        <?php if ($m = flash('msg')): ?>
-          <div class="login-alert success">
-            <span>✅</span>
-            <span><?= e($m) ?></span>
+          <div class="alert alert-danger" style="margin-bottom:16px; padding:10px; font-size:0.85rem; background:#fef2f2; color:#991b1b; border-radius:6px; border-left:3px solid #dc2626;">
+            <?= e($err) ?>
           </div>
         <?php endif; ?>
 
         <form method="POST" class="login-form">
-
           <div class="field">
             <label for="username">Username</label>
-            <div class="input-icon-group">
-              <span class="icon-left">👤</span>
-              <input type="text" id="username" name="username" 
-                     placeholder="Masukkan username" required autofocus
-                     value="<?= e($_POST['username'] ?? '') ?>">
-            </div>
+            <input type="text" id="username" name="username" 
+                   placeholder="Masukkan username" required autofocus
+                   value="<?= e($_POST['username'] ?? '') ?>">
           </div>
 
           <div class="field">
             <label for="password">Password</label>
-            <div class="input-icon-group">
-              <span class="icon-left">🔒</span>
-              <input type="password" id="password" name="password" 
-                     placeholder="Masukkan password" required>
-              <button type="button" class="toggle-password" 
-                      onclick="togglePassword()" title="Lihat/Sembunyikan password">
-                👁️
-              </button>
-            </div>
+            <input type="password" id="password" name="password" 
+                   placeholder="Masukkan password" required>
           </div>
 
-          <button type="submit" class="btn-login">
+          <button type="submit" class="btn-submit">
             Login
           </button>
         </form>
@@ -121,46 +106,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
   </div>
 
-  <!-- ============ INFO LAYANAN ============ -->
-  <div class="info-layanan">
-    <div class="info-layanan-inner">
+  <!-- FOOTER INFO LAYANAN -->
+  <div class="login-footer">
+    <!-- Gelombang hijau dekoratif -->
+    <div class="footer-wave"></div> 
+    
+    <div class="footer-content">
       <div class="info-item">
         <div class="info-icon">📅</div>
-        <div>
-          <strong>Reservasi Online</strong>
-          <small>Booking kapan saja & di mana saja</small>
-        </div>
+        <span>Reservasi Online</span>
       </div>
+      <div class="info-divider"></div>
       <div class="info-item">
         <div class="info-icon">🛡️</div>
-        <div>
-          <strong>Mudah & Aman</strong>
-          <small>Data terjaga dan terpercaya</small>
-        </div>
+        <span>Mudah & Aman</span>
       </div>
+      <div class="info-divider"></div>
       <div class="info-item">
         <div class="info-icon">🕐</div>
-        <div>
-          <strong>Tersedia Setiap Hari</strong>
-          <small>Akses 24 jam non-stop</small>
-        </div>
+        <span>Tersedia Setiap Hari</span>
       </div>
     </div>
   </div>
-
-<script>
-function togglePassword() {
-  const input = document.getElementById('password');
-  const btn = document.querySelector('.toggle-password');
-  if (input.type === 'password') {
-    input.type = 'text';
-    btn.textContent = '🙈';
-  } else {
-    input.type = 'password';
-    btn.textContent = '👁️';
-  }
-}
-</script>
 
 </body>
 </html>

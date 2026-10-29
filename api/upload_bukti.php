@@ -19,8 +19,8 @@ if (!$b) {
     redirect(BASE_URL . '/pages/cek_booking.php?q=' . urlencode($kode));
 }
 
-if ($b['metode_pembayaran'] !== 'transfer') {
-    flash('err', 'Booking ini tidak menggunakan metode transfer.');
+if (!in_array($b['metode_pembayaran'], ['transfer', 'qris'])) {
+    flash('err', 'Booking ini tidak menggunakan metode pembayaran digital (QRIS/Transfer).');
     redirect(BASE_URL . '/pages/cek_booking.php?q=' . urlencode($kode));
 }
 

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 16, 2026 at 07:53 PM
+-- Generation Time: Oct 29, 2026 at 03:24 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -44,7 +44,7 @@ CREATE TABLE `booking` (
   `diskon_id` int(11) DEFAULT NULL,
   `diskon_persen` decimal(5,2) DEFAULT 0.00,
   `total_bayar` decimal(12,2) NOT NULL,
-  `metode_pembayaran` enum('tunai','transfer') DEFAULT NULL,
+  `metode_pembayaran` enum('qris','transfer') DEFAULT NULL,
   `status_pembayaran` enum('belum_bayar','menunggu_verifikasi','berhasil','gagal') DEFAULT 'belum_bayar',
   `bukti_transfer` varchar(255) DEFAULT NULL,
   `catatan_pembayaran` text DEFAULT NULL,
@@ -63,23 +63,9 @@ CREATE TABLE `booking` (
 --
 
 INSERT INTO `booking` (`id`, `kode_booking`, `sarana_id`, `nama_penyewa`, `no_hp`, `email`, `instansi`, `tanggal`, `jam_mulai`, `jam_selesai`, `durasi_jam`, `harga_per_jam`, `subtotal`, `diskon_id`, `diskon_persen`, `total_bayar`, `metode_pembayaran`, `status_pembayaran`, `bukti_transfer`, `catatan_pembayaran`, `verified_payment_by`, `verified_payment_at`, `status`, `kode_gambar`, `catatan_petugas`, `verified_by`, `verified_at`, `created_at`) VALUES
-(2, 'BKG-261017-D1A87', 3, 'tes2', '1234', 'hsgvsudh@gmail.com', 'GOLKAR', '2026-11-15', '12:00:00', '16:00:00', 4, 100000.00, 400000.00, NULL, 0.00, 400000.00, 'transfer', 'berhasil', 'assets/bukti_transfer/bukti-2-1792170463.jpg', '', 1, '2026-10-17 00:08:26', 'terverifikasi', 'assets/booking_codes/kode_BKG-261017-D1A87.svg', '', 1, '2026-10-17 00:09:06', '2026-10-16 17:06:57');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `diskon`
---
-
-CREATE TABLE `diskon` (
-  `id` int(11) NOT NULL,
-  `nama` varchar(100) NOT NULL,
-  `persen` decimal(5,2) NOT NULL,
-  `tanggal_mulai` date NOT NULL,
-  `tanggal_selesai` date NOT NULL,
-  `aktif` tinyint(1) DEFAULT 1,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+(4, 'BKG-261029-8F763', 2, 'tes2', '085172203031', 'hsgvsudh@gmail.com', 'PDIP', '2026-12-01', '08:00:00', '10:00:00', 2, 50000.00, 100000.00, NULL, 0.00, 100000.00, 'qris', 'berhasil', 'assets/bukti_transfer/bukti-4-1793282074.jpg', NULL, 1, '2026-10-29 20:54:49', 'terverifikasi', 'assets/booking_codes/kode_BKG-261029-8F763.svg', '', 1, '2026-10-29 21:00:50', '2026-10-29 13:49:08'),
+(5, 'BKG-261029-B998D', 1, 'tes', '085172203031', 'hsgvsudh@gmail.com', 'GOLKAR', '2026-11-25', '09:00:00', '12:00:00', 3, 150000.00, 450000.00, NULL, 0.00, 450000.00, 'transfer', 'belum_bayar', NULL, NULL, NULL, NULL, 'pending', 'assets/booking_codes/kode_BKG-261029-B998D.svg', NULL, NULL, NULL, '2026-10-29 14:01:26'),
+(6, 'BKG-261029-EEA50', 1, 'tes3', '085172203031', 'hsgvsudh@gmail.com', 'PDIP2', '2026-11-30', '08:00:00', '10:00:00', 2, 150000.00, 300000.00, NULL, 0.00, 300000.00, 'qris', 'belum_bayar', NULL, NULL, NULL, NULL, 'pending', 'assets/booking_codes/kode_BKG-261029-EEA50.svg', NULL, NULL, NULL, '2026-10-29 14:01:50');
 
 -- --------------------------------------------------------
 
@@ -102,7 +88,8 @@ INSERT INTO `pengaturan` (`id`, `kunci`, `nilai`, `updated_at`) VALUES
 (1, 'nama_bank', 'Bank Kalsel', '2026-10-16 16:41:26'),
 (2, 'nomor_rekening', '1234567890', '2026-10-16 16:41:26'),
 (3, 'nama_pemilik_rekening', 'BPSDMD Provinsi Kalimantan Selatan', '2026-10-16 16:41:26'),
-(4, 'catatan_tunai', 'Pembayaran dilakukan secara tunai di kantor BPSDMD Provinsi Kalimantan Selatan pada jam kerja (Senin-Jumat, 08.00-16.00 WITA). Harap membawa kode booking.', '2026-10-16 16:41:26');
+(4, 'catatan_tunai', 'Pembayaran dilakukan secara tunai di kantor BPSDMD Provinsi Kalimantan Selatan pada jam kerja (Senin-Jumat, 08.00-16.00 WITA). Harap membawa kode booking.', '2026-10-16 16:41:26'),
+(5, 'qris_image', 'qris-1793281559.png', '2026-10-29 13:45:59');
 
 -- --------------------------------------------------------
 
@@ -129,9 +116,8 @@ CREATE TABLE `sarana` (
 --
 
 INSERT INTO `sarana` (`id`, `nama`, `slug`, `jenis`, `deskripsi`, `kelengkapan`, `harga_per_jam`, `gambar`, `galeri`, `status`, `created_at`) VALUES
-(1, 'Lapangan Futsal A', 'lapangan-futsal-a', 'Futsal', 'Lapangan futsal indoor dengan rumput sintetis', NULL, 150000.00, NULL, NULL, 'tersedia', '2026-10-14 13:31:32'),
-(2, 'Lapangan Badminton 1', 'lapangan-badminton-1', 'Badminton', 'Lapangan badminton standar BWF', NULL, 50000.00, NULL, NULL, 'tersedia', '2026-10-14 13:31:32'),
-(3, 'Lapangan Basket', 'lapangan-basket', 'Basket', 'Lapangan basket outdoor', NULL, 100000.00, NULL, NULL, 'tersedia', '2026-10-14 13:31:32');
+(1, 'Lapangan Futsal', 'lapangan-futsal', 'Futsal', 'Lapangan futsal indoor dengan rumput sintetis', 'TES\r\ntes\r\nTes', 150000.00, 'sarana-1793280610-9efdd6.jpeg', NULL, 'tersedia', '2026-10-14 13:31:32'),
+(2, 'Lapangan Tenis', 'lapangan-tenis', 'Tenis', 'Lapangan Tenis', '', 50000.00, 'sarana-1793280626-006f3c.jpg', NULL, 'tersedia', '2026-10-14 13:31:32');
 
 -- --------------------------------------------------------
 
@@ -172,12 +158,6 @@ ALTER TABLE `booking`
   ADD KEY `verified_by` (`verified_by`);
 
 --
--- Indexes for table `diskon`
---
-ALTER TABLE `diskon`
-  ADD PRIMARY KEY (`id`);
-
---
 -- Indexes for table `pengaturan`
 --
 ALTER TABLE `pengaturan`
@@ -206,25 +186,19 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `booking`
 --
 ALTER TABLE `booking`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
-
---
--- AUTO_INCREMENT for table `diskon`
---
-ALTER TABLE `diskon`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `pengaturan`
 --
 ALTER TABLE `pengaturan`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `sarana`
 --
 ALTER TABLE `sarana`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `users`

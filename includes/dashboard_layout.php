@@ -1,8 +1,4 @@
 <?php
-/**
- * Layout wrapper untuk dashboard admin.
- */
-
 if (!isset($content)) $content = '';
 if (!isset($title)) $title = 'Dashboard';
 if (!isset($activeMenu)) $activeMenu = '';
@@ -20,7 +16,7 @@ function menuItem($url, $icon, $label, $key, $activeMenu) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title><?= e($pageTitle) ?> — BPSDMD Kalsel</title>
+<title><?= e($pageTitle) ?> — SIPASTRA</title>
 <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/style.css">
 <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/dashboard.css">
 </head>
@@ -28,25 +24,21 @@ function menuItem($url, $icon, $label, $key, $activeMenu) {
 
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-brand">
-    <div class="logo-box">🏟️</div>
-    <div class="brand-text">
-      BPSDMD Kalsel
-      <small>Reservasi Sarana</small>
-    </div>
+    <!-- Logo SIPASTRA dipasang di sini dengan batasan ukuran -->
+    <img src="<?= BASE_URL ?>/assets/img/logo.png" alt="SIPASTRA" class="sidebar-logo">
+    <div class="brand-text" style="margin-top: 10px;">PANEL ADMIN</div>
   </div>
 
   <nav class="sidebar-menu">
     <?php menuItem(BASE_URL . '/pages/admin/dashboard.php', '🏠', 'Dashboard', 'dashboard', $activeMenu); ?>
-
-    <div class="sidebar-section">Manajemen</div>
     <?php menuItem(BASE_URL . '/pages/admin/kelola_booking.php', '📅', 'Reservasi', 'reservasi', $activeMenu); ?>
     <?php menuItem(BASE_URL . '/pages/admin/kelola_sarana.php', '🏢', 'Fasilitas', 'fasilitas', $activeMenu); ?>
+    
+    <div class="sidebar-section">Laporan</div>
     <?php menuItem(BASE_URL . '/pages/admin/laporan.php', '📈', 'Laporan', 'laporan', $activeMenu); ?>
 
     <div class="sidebar-section">Akun</div>
     <?php menuItem(BASE_URL . '/pages/admin/profile.php', '👤', 'Profile Saya', 'profile', $activeMenu); ?>
-
-    <div class="sidebar-section">Lainnya</div>
     <?php menuItem(BASE_URL . '/index.php', '🏡', 'Ke Beranda', 'home', $activeMenu); ?>
     <?php menuItem(BASE_URL . '/pages/logout.php', '🚪', 'Logout', 'logout', $activeMenu); ?>
   </nav>
@@ -58,18 +50,8 @@ function menuItem($url, $icon, $label, $key, $activeMenu) {
       <button class="topbar-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
       <h2><?= e($title) ?></h2>
     </div>
-    <div class="user-info" style="display:flex;align-items:center;gap:10px;">
-      <a href="<?= BASE_URL ?>/pages/admin/profile.php" 
-         style="display:flex;align-items:center;gap:8px;text-decoration:none;color:inherit;">
-        <div style="width:32px;height:32px;border-radius:50%;background:#dcfce7;color:#166534;
-                    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;">
-          <?= strtoupper(substr($nama,0,1)) ?>
-        </div>
-        <div>
-          <div style="font-size:.85rem;color:#64748b;line-height:1.1;">Admin</div>
-          <div style="font-weight:600;color:#166534;font-size:.9rem;"><?= e($nama) ?></div>
-        </div>
-      </a>
+    <div class="user-info">
+      Admin: <strong><?= e($nama) ?></strong>
     </div>
   </header>
 
@@ -81,10 +63,9 @@ function menuItem($url, $icon, $label, $key, $activeMenu) {
 <script>
 document.querySelectorAll('.sidebar-menu a').forEach(a => {
   a.addEventListener('click', () => {
-    if (window.innerWidth <= 900) document.getElementById('sidebar').classList.remove('open');
+    if (window.innerWidth <= 992) document.getElementById('sidebar').classList.remove('open');
   });
 });
 </script>
-
 </body>
 </html>

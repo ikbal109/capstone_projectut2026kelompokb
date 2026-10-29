@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('msg', 'Booking ditandai selesai.');
         }
 
-        // Verifikasi pembayaran
+        // Verifikasi pembayaran (Berlaku untuk Transfer & QRIS)
         if ($action === 'verifikasi_bayar') {
             $catatan = trim($_POST['catatan_pembayaran'] ?? '');
             $stmt = $conn->prepare("UPDATE booking SET status_pembayaran='berhasil', catatan_pembayaran=?, verified_payment_by=?, verified_payment_at=NOW() WHERE id=?");
@@ -53,14 +53,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->bind_param('sii', $catatan, $user_id, $id);
             $stmt->execute();
             flash('msg', 'Pembayaran ditolak.');
-        }
-
-        // Tandai tunai lunas
-        if ($action === 'tandai_lunas') {
-            $stmt = $conn->prepare("UPDATE booking SET status_pembayaran='berhasil', verified_payment_by=?, verified_payment_at=NOW() WHERE id=?");
-            $stmt->bind_param('ii', $user_id, $id);
-            $stmt->execute();
-            flash('msg', 'Pembayaran tunai ditandai lunas.');
         }
 
         // Hapus
@@ -116,14 +108,12 @@ if ($q !== '') {
 
 $whereSQL = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
-// Count
 $stmt = $conn->prepare("SELECT COUNT(*) c FROM booking b $whereSQL");
 if ($params) $stmt->bind_param($types, ...$params);
 $stmt->execute();
 $totalData = (int)$stmt->get_result()->fetch_assoc()['c'];
 $totalPages = max(1, (int)ceil($totalData / $perPage));
 
-// Data
 $stmt = $conn->prepare("SELECT b.*, s.nama AS sarana_nama, s.jenis AS sarana_jenis 
         FROM booking b JOIN sarana s ON s.id = b.sarana_id 
         $whereSQL ORDER BY b.created_at DESC LIMIT $perPage OFFSET $offset");
@@ -131,7 +121,6 @@ if ($params) $stmt->bind_param($types, ...$params);
 $stmt->execute();
 $list = $stmt->get_result();
 
-// Statistik ringkas
 $stat = [
     'total'         => (int)$conn->query("SELECT COUNT(*) c FROM booking")->fetch_assoc()['c'],
     'pending'       => (int)$conn->query("SELECT COUNT(*) c FROM booking WHERE status='pending'")->fetch_assoc()['c'],
@@ -160,7 +149,6 @@ ob_start();
   <div class="alert alert-success"><?= e($m) ?></div>
 <?php endif; ?>
 
-<!-- STAT -->
 <div class="stat-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));">
   <div class="stat-card blue">
     <div class="stat-icon">📊</div>
@@ -188,13 +176,11 @@ ob_start();
   </div>
 </div>
 
-<!-- FILTER -->
 <div class="chart-card" style="margin-bottom:20px;">
   <form method="GET" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr auto;gap:12px;align-items:end;">
     <div class="form-group" style="margin:0;">
       <label>Cari</label>
-      <input type="text" name="q" class="form-control" value="<?= e($q) ?>" 
-             placeholder="Kode / Nama / No HP">
+      <input type="text" name="q" class="form-control" value="<?= e($q) ?>" placeholder="Kode / Nama / No HP">
     </div>
     <div class="form-group" style="margin:0;">
       <label>Status</label>
@@ -221,9 +207,7 @@ ob_start();
       <select name="sarana" class="form-control">
         <option value="">Semua</option>
         <?php while ($s = $listSarana->fetch_assoc()): ?>
-          <option value="<?= $s['id'] ?>" <?= $sarana==$s['id']?'selected':'' ?>>
-            <?= e($s['nama']) ?>
-          </option>
+          <option value="<?= $s['id'] ?>" <?= $sarana==$s['id']?'selected':'' ?>><?= e($s['nama']) ?></option>
         <?php endwhile; ?>
       </select>
     </div>
@@ -240,7 +224,6 @@ ob_start();
   </form>
 </div>
 
-<!-- TABEL -->
 <div class="chart-card">
   <h3 style="margin-top:0;">
     📋 Daftar Reservasi 
@@ -289,9 +272,7 @@ ob_start();
               </td>
               <td>
                 <strong><?= date('d M Y', strtotime($b['tanggal'])) ?></strong><br>
-                <small style="color:#64748b;">
-                  <?= substr($b['jam_mulai'],0,5) ?> - <?= substr($b['jam_selesai'],0,5) ?>
-                </small>
+                <small style="color:#64748b;"><?= substr($b['jam_mulai'],0,5) ?> - <?= substr($b['jam_selesai'],0,5) ?></small>
               </td>
               <td><strong style="color:#166534;">Rp <?= number_format($b['total_bayar'],0,',','.') ?></strong></td>
               <td><span class="badge badge-<?= $badgeClass ?>"><?= $badgeLabel ?></span></td>
@@ -301,13 +282,13 @@ ob_start();
                 </span>
                 <?php if (!empty($b['metode_pembayaran'])): ?>
                   <br><small style="color:#64748b;font-size:.72rem;">
-                    <?= $b['metode_pembayaran'] === 'transfer' ? '🏦 Transfer' : '💵 Tunai' ?>
+                    <!-- PERBAIKAN: Mengubah teks Tunai menjadi QRIS -->
+                    <?= $b['metode_pembayaran'] === 'transfer' ? '🏦 Transfer' : ($b['metode_pembayaran'] === 'qris' ? '📱 QRIS' : '—') ?>
                   </small>
                 <?php endif; ?>
               </td>
               <td style="text-align:right;white-space:nowrap;">
-                <button type="button" class="btn btn-sm btn-primary"
-                        onclick="bukaDetail(<?= $b['id'] ?>)">👁️ Detail</button>
+                <button type="button" class="btn btn-sm btn-primary" onclick="bukaDetail(<?= $b['id'] ?>)">👁️ Detail</button>
               </td>
             </tr>
           <?php endwhile; ?>
@@ -319,13 +300,8 @@ ob_start();
       <div style="display:flex;justify-content:center;gap:6px;margin-top:20px;flex-wrap:wrap;">
         <?php $qsBase = $_GET;
         for ($i = 1; $i <= $totalPages; $i++):
-          $qsBase['page'] = $i;
-          $link = '?' . http_build_query($qsBase);
-          $active = $i == $page; ?>
-          <a href="<?= $link ?>" 
-             style="padding:8px 14px;border-radius:6px;text-decoration:none;font-weight:600;font-size:.88rem;
-                    background:<?= $active?'#166534':'#fff' ?>;color:<?= $active?'#fff':'#475569' ?>;
-                    border:1px solid <?= $active?'#166534':'#e2e8f0' ?>;">
+          $qsBase['page'] = $i; $link = '?' . http_build_query($qsBase); $active = $i == $page; ?>
+          <a href="<?= $link ?>" style="padding:8px 14px;border-radius:6px;text-decoration:none;font-weight:600;font-size:.88rem;background:<?= $active?'#166534':'#fff' ?>;color:<?= $active?'#fff':'#475569' ?>;border:1px solid <?= $active?'#166534':'#e2e8f0' ?>;">
             <?= $i ?>
           </a>
         <?php endfor; ?>
@@ -352,10 +328,7 @@ async function bukaDetail(id) {
     const res = await fetch('<?= BASE_URL ?>/api/detail_booking.php?id=' + id);
     const b = await res.json();
 
-    if (b.error) {
-      content.innerHTML = '<div class="alert alert-danger">' + b.error + '</div>';
-      return;
-    }
+    if (b.error) { content.innerHTML = '<div class="alert alert-danger">' + b.error + '</div>'; return; }
 
     const statusMap = {
       pending:       ['warning', '⏳ Pending'],
@@ -375,29 +348,16 @@ async function bukaDetail(id) {
         <div style="text-align:right;">
           <span class="badge badge-${bc}" style="font-size:.85rem;padding:6px 14px;">${bl}</span>
           <div style="margin-top:8px;">
-            <button onclick="document.getElementById('modalDetail').style.display='none'"
-                    style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#94a3b8;">✕</button>
+            <button onclick="document.getElementById('modalDetail').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#94a3b8;">✕</button>
           </div>
         </div>
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px;background:#f8fafc;border-radius:10px;margin-bottom:16px;">
-        <div>
-          <div style="font-size:.78rem;color:#64748b;">Sarana</div>
-          <div style="font-weight:600;">${b.sarana_nama}</div>
-        </div>
-        <div>
-          <div style="font-size:.78rem;color:#64748b;">Tanggal</div>
-          <div style="font-weight:600;">${b.tanggal_formatted}</div>
-        </div>
-        <div>
-          <div style="font-size:.78rem;color:#64748b;">Waktu</div>
-          <div style="font-weight:600;">${b.jam_mulai.substring(0,5)} - ${b.jam_selesai.substring(0,5)} (${b.durasi_jam} jam)</div>
-        </div>
-        <div>
-          <div style="font-size:.78rem;color:#64748b;">Dibuat</div>
-          <div style="font-weight:600;">${b.created_at}</div>
-        </div>
+        <div><div style="font-size:.78rem;color:#64748b;">Sarana</div><div style="font-weight:600;">${b.sarana_nama}</div></div>
+        <div><div style="font-size:.78rem;color:#64748b;">Tanggal</div><div style="font-weight:600;">${b.tanggal_formatted}</div></div>
+        <div><div style="font-size:.78rem;color:#64748b;">Waktu</div><div style="font-weight:600;">${b.jam_mulai.substring(0,5)} - ${b.jam_selesai.substring(0,5)} (${b.durasi_jam} jam)</div></div>
+        <div><div style="font-size:.78rem;color:#64748b;">Dibuat</div><div style="font-weight:600;">${b.created_at}</div></div>
       </div>
 
       <h4 style="margin-bottom:8px;">👤 Data Penyewa</h4>
@@ -410,18 +370,11 @@ async function bukaDetail(id) {
 
       <h4 style="margin-bottom:8px;">💰 Rincian Biaya</h4>
       <table style="width:100%;font-size:.9rem;margin-bottom:20px;background:#f0fdf4;padding:12px;border-radius:8px;">
-        <tr><td style="padding:4px 8px;color:#64748b;">Harga per jam</td>
-            <td style="text-align:right;padding:4px 8px;">Rp ${b.harga_per_jam_fmt}</td></tr>
-        <tr><td style="padding:4px 8px;color:#64748b;">Subtotal (${b.durasi_jam} jam)</td>
-            <td style="text-align:right;padding:4px 8px;">Rp ${b.subtotal_fmt}</td></tr>
-        <tr style="border-top:1px solid #86efac;">
-          <td style="padding:8px;font-weight:700;font-size:1rem;">Total Bayar</td>
-          <td style="text-align:right;padding:8px;font-weight:800;font-size:1.1rem;color:#166534;">Rp ${b.total_bayar_fmt}</td>
-        </tr>
+        <tr><td style="padding:4px 8px;color:#64748b;">Total Bayar</td><td style="text-align:right;padding:8px;font-weight:800;font-size:1.1rem;color:#166534;">Rp ${b.total_bayar_fmt}</td></tr>
       </table>
     `;
 
-    // Pembayaran
+    // PEMBAYARAN
     html += `
       <h4 style="margin-bottom:8px;">💳 Informasi Pembayaran</h4>
       <div style="background:#f8fafc;border-radius:10px;padding:14px;margin-bottom:20px;">
@@ -429,13 +382,11 @@ async function bukaDetail(id) {
           <div>
             <div style="font-size:.78rem;color:#64748b;">Metode</div>
             <div style="font-weight:700;">
-              ${b.metode_pembayaran === 'transfer' ? '🏦 Transfer Bank' : (b.metode_pembayaran === 'tunai' ? '💵 Tunai' : '—')}
+              <!-- PERBAIKAN: Mengubah deteksi metode -->
+              ${b.metode_pembayaran === 'transfer' ? '🏦 Transfer Bank' : (b.metode_pembayaran === 'qris' ? '📱 QRIS' : '—')}
             </div>
           </div>
-          <div>
-            <div style="font-size:.78rem;color:#64748b;">Status</div>
-            <div style="font-weight:700;">${b.status_pembayaran_label}</div>
-          </div>
+          <div><div style="font-size:.78rem;color:#64748b;">Status</div><div style="font-weight:700;">${b.status_pembayaran_label}</div></div>
         </div>
     `;
 
@@ -443,22 +394,16 @@ async function bukaDetail(id) {
       const isPdf = b.bukti_transfer_ext === 'pdf';
       html += `
         <div style="margin-bottom:12px;">
-          <div style="font-size:.78rem;color:#64748b;margin-bottom:6px;">Bukti Transfer</div>
-          ${isPdf 
-            ? `<a href="${b.bukti_transfer_url}" target="_blank" class="btn btn-accent btn-sm">📄 Lihat PDF</a>`
-            : `<a href="${b.bukti_transfer_url}" target="_blank">
-                 <img src="${b.bukti_transfer_url}" style="max-width:100%;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.1);">
-               </a>`
-          }
+          <div style="font-size:.78rem;color:#64748b;margin-bottom:6px;">Bukti Pembayaran</div>
+          ${isPdf ? `<a href="${b.bukti_transfer_url}" target="_blank" class="btn btn-accent btn-sm">📄 Lihat PDF</a>` : `<a href="${b.bukti_transfer_url}" target="_blank"><img src="${b.bukti_transfer_url}" style="max-width:100%;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.1);"></a>`}
         </div>`;
     }
 
     if (b.catatan_pembayaran) {
-      html += `<div class="alert alert-info" style="margin-bottom:12px;">
-        <strong>📝 Catatan Pembayaran:</strong> ${b.catatan_pembayaran}
-      </div>`;
+      html += `<div class="alert alert-info" style="margin-bottom:12px;"><strong>📝 Catatan Pembayaran:</strong> ${b.catatan_pembayaran}</div>`;
     }
 
+    // TOMBOL AKSI PEMBAYARAN (Disamakan untuk QRIS & Transfer)
     if (b.status_pembayaran !== 'berhasil') {
       html += `
         <form method="POST" action="" style="margin-top:8px;">
@@ -466,30 +411,23 @@ async function bukaDetail(id) {
           <input type="hidden" name="return_qs" value="<?= e($returnQs) ?>">
           <div class="form-group" style="margin-bottom:10px;">
             <label style="font-size:.85rem;">Catatan Pembayaran (opsional)</label>
-            <input type="text" name="catatan_pembayaran" class="form-control" 
-                   placeholder="cth: Pembayaran sudah masuk">
+            <input type="text" name="catatan_pembayaran" class="form-control" placeholder="cth: Pembayaran sudah masuk">
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
       `;
 
-      if (b.metode_pembayaran === 'transfer') {
+      if (b.metode_pembayaran === 'transfer' || b.metode_pembayaran === 'qris') {
         html += `
             <button name="action" value="verifikasi_bayar" class="btn btn-primary btn-sm">✅ Verifikasi Pembayaran</button>
-            <button name="action" value="tolak_bayar" class="btn btn-danger btn-sm"
-                    onclick="return confirm('Tolak pembayaran ini?')">❌ Tolak Bukti</button>`;
-      } else if (b.metode_pembayaran === 'tunai') {
-        html += `
-            <button name="action" value="tandai_lunas" class="btn btn-primary btn-sm">💵 Tandai Sudah Bayar</button>`;
+            <button name="action" value="tolak_bayar" class="btn btn-danger btn-sm" onclick="return confirm('Tolak bukti pembayaran ini?')">❌ Tolak Bukti</button>`;
       }
-
       html += `</div></form>`;
     } else {
       html += `<div style="color:#16a34a;font-weight:600;font-size:.9rem;">✅ Pembayaran sudah lunas</div>`;
     }
-
     html += `</div>`;
 
-    // Gambar kode booking
+    // KODE BOOKING
     if (b.kode_gambar) {
       html += `
         <h4 style="margin-bottom:8px;">🖼️ Kode Booking</h4>
@@ -499,44 +437,61 @@ async function bukaDetail(id) {
     }
 
     if (b.catatan_petugas) {
-      html += `
-        <div class="alert alert-info" style="margin-bottom:20px;">
-          <strong>📝 Catatan:</strong><br>${b.catatan_petugas}
-        </div>`;
+      html += `<div class="alert alert-info" style="margin-bottom:20px;"><strong>📝 Catatan Booking:</strong><br>${b.catatan_petugas}</div>`;
     }
 
-    // Form aksi booking
+    // AKSI BOOKING (VERIFIKASI / TOLAK)
     html += `<div style="border-top:1px solid #e2e8f0;padding-top:20px;">`;
 
     if (b.status === 'pending') {
-      html += `
-        <form method="POST" action="">
-          <input type="hidden" name="id" value="${b.id}">
-          <input type="hidden" name="return_qs" value="<?= e($returnQs) ?>">
-          <div class="form-group">
-            <label>Catatan Booking (opsional)</label>
-            <textarea name="catatan" class="form-control" rows="2"></textarea>
+      if (b.status_pembayaran === 'berhasil') {
+        // Jika lunas, bisa verifikasi booking
+        html += `
+          <form method="POST" action="">
+            <input type="hidden" name="id" value="${b.id}">
+            <input type="hidden" name="return_qs" value="<?= e($returnQs) ?>">
+            <div class="form-group">
+              <label>Catatan Booking (opsional)</label>
+              <textarea name="catatan" class="form-control" rows="2"></textarea>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button name="action" value="verifikasi" class="btn btn-primary">✅ Verifikasi Booking</button>
+              <button name="action" value="tolak" class="btn btn-danger" onclick="return confirm('Yakin tolak booking ini?')">❌ Tolak Booking</button>
+            </div>
+          </form>`;
+      } else {
+        // Jika belum bayar, tetap tampilkan tombol TOLAK BOOKING
+        html += `
+          <div class="alert alert-warning" style="margin-bottom:16px; background:#fffbeb; border-left:4px solid #f59e0b; padding:16px; border-radius:8px;">
+            <strong style="color:#92400e;">⚠️ Pembayaran Belum Lunas</strong><br>
+            <span style="color:#b45309; font-size:0.9rem;">Silakan verifikasi pembayaran terlebih dahulu.</span>
           </div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <button name="action" value="verifikasi" class="btn btn-primary">✅ Verifikasi Booking</button>
-            <button name="action" value="tolak" class="btn btn-danger" 
-                    onclick="return confirm('Yakin tolak booking ini?')">❌ Tolak Booking</button>
-          </div>
-        </form>`;
+          <form method="POST" action="">
+            <input type="hidden" name="id" value="${b.id}">
+            <input type="hidden" name="return_qs" value="<?= e($returnQs) ?>">
+            <div class="form-group">
+              <label>Catatan Penolakan (opsional)</label>
+              <textarea name="catatan" class="form-control" rows="2" placeholder="Alasan ditolak..."></textarea>
+            </div>
+            <button name="action" value="tolak" class="btn btn-danger btn-sm" onclick="return confirm('Yakin tolak booking ini?')">❌ Tolak Booking</button>
+          </form>`;
+      }
     } else if (b.status === 'terverifikasi') {
+      let waNumber = b.no_hp.replace(/^0/, '62');
+      let waText = `SIPASTRA - BPSDM Provinsi Kalimantan Selatan\n\nYth. Bapak/Ibu *${b.nama_penyewa}*,\n\nReservasi sarana olahraga Anda telah *DISETUJUI*.\n\n*DETAIL RESERVASI*\nKode Reservasi: ${b.kode_booking}\nNama Pemesan: ${b.nama_penyewa}\nInstansi: ${b.instansi || '-'}\nFasilitas: ${b.sarana_nama}\nTanggal Sewa: ${b.tanggal_formatted}\nJam Sewa: ${b.jam_mulai.substring(0,5)} - ${b.jam_selesai.substring(0,5)}\nTotal Jam: ${b.durasi_jam} Jam\nTotal Biaya: Rp ${b.total_bayar_fmt}\n\nMohon simpan kode reservasi tersebut sebagai bukti reservasi.\n\nTerima kasih.\n*SIPASTRA - BPSDM Provinsi Kalimantan Selatan*`;
+      let waLink = `https://wa.me/${waNumber}?text=${encodeURIComponent(waText)}`;
+
       html += `
-        <form method="POST" action="" onsubmit="return confirm('Tandai booking sebagai SELESAI?')">
-          <input type="hidden" name="id" value="${b.id}">
-          <input type="hidden" name="return_qs" value="<?= e($returnQs) ?>">
-          <button name="action" value="selesai" class="btn btn-primary">🎉 Tandai Selesai</button>
-        </form>`;
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <a href="${waLink}" target="_blank" style="display:flex; align-items:center; justify-content:center; gap:8px; background:#16a34a; color:#fff; text-decoration:none; padding:12px; border-radius:8px; font-weight:600;"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg> Hubungi via WhatsApp</a>
+          <form method="POST" action="" onsubmit="return confirm('Tandai booking sebagai SELESAI?')" style="margin-top:8px;">
+            <input type="hidden" name="id" value="${b.id}">
+            <input type="hidden" name="return_qs" value="<?= e($returnQs) ?>">
+            <button name="action" value="selesai" class="btn btn-primary btn-block">🎉 Tandai Selesai</button>
+          </form>
+        </div>`;
     } else {
-      html += `
-        <form method="POST" action="" onsubmit="return confirm('Hapus booking ini secara permanen?')">
-          <input type="hidden" name="id" value="${b.id}">
-          <input type="hidden" name="return_qs" value="<?= e($returnQs) ?>">
-          <button name="action" value="hapus" class="btn btn-danger">🗑️ Hapus Permanen</button>
-        </form>`;
+      html += `<form method="POST" action="" onsubmit="return confirm('Hapus booking ini secara permanen?')"><input type="hidden" name="id" value="${b.id}"><input type="hidden" name="return_qs" value="<?= e($returnQs) ?>"><button name="action" value="hapus" class="btn btn-danger">🗑️ Hapus Permanen</button></form>`;
     }
 
     html += `</div>`;
@@ -561,3 +516,4 @@ $title = 'Kelola Reservasi';
 $pageTitle = 'Kelola Reservasi';
 $activeMenu = 'reservasi';
 require_once __DIR__ . '/../../includes/dashboard_layout.php';
+?>
