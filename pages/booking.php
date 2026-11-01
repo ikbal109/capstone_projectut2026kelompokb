@@ -249,16 +249,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <div class="card">
     <h3>📅 Ketersediaan 30 Hari ke Depan</h3>
     <p class="sub">Klik tanggal untuk melihat jam yang tersedia.</p>
-    <div id="kalender" style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;">
-      <div style="text-align:center;font-size:.8rem;font-weight:700;color:#64748b;padding:6px;">Sen</div>
-      <div style="text-align:center;font-size:.8rem;font-weight:700;color:#64748b;padding:6px;">Sel</div>
-      <div style="text-align:center;font-size:.8rem;font-weight:700;color:#64748b;padding:6px;">Rab</div>
-      <div style="text-align:center;font-size:.8rem;font-weight:700;color:#64748b;padding:6px;">Kam</div>
-      <div style="text-align:center;font-size:.8rem;font-weight:700;color:#64748b;padding:6px;">Jum</div>
-      <div style="text-align:center;font-size:.8rem;font-weight:700;color:#64748b;padding:6px;">Sab</div>
-      <div style="text-align:center;font-size:.8rem;font-weight:700;color:#64748b;padding:6px;">Min</div>
-      <div id="kalender-hari" style="display:contents;"></div>
-    </div>
+    <div id="kalender">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+    <button type="button" id="btn-prev" onclick="ubahBulan(-1)" style="background:#f1f5f9; border:none; padding:8px 16px; border-radius:8px; cursor:pointer; font-weight:700;">&laquo; Sebelumnya</button>
+    <h4 id="judul-bulan" style="margin:0; color:#1e293b; font-size:1.1rem;">Bulan</h4>
+    <button type="button" id="btn-next" onclick="ubahBulan(1)" style="background:#f1f5f9; border:none; padding:8px 16px; border-radius:8px; cursor:pointer; font-weight:700;">Berikutnya &raquo;</button>
+  </div>
+  
+  <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px; margin-bottom:8px;">
+    <div style="text-align:center;font-size:.8rem;font-weight:700;color:#64748b;padding:6px;">Sen</div>
+    <div style="text-align:center;font-size:.8rem;font-weight:700;color:#64748b;padding:6px;">Sel</div>
+    <div style="text-align:center;font-size:.8rem;font-weight:700;color:#64748b;padding:6px;">Rab</div>
+    <div style="text-align:center;font-size:.8rem;font-weight:700;color:#64748b;padding:6px;">Kam</div>
+    <div style="text-align:center;font-size:.8rem;font-weight:700;color:#64748b;padding:6px;">Jum</div>
+    <div style="text-align:center;font-size:.8rem;font-weight:700;color:#64748b;padding:6px;">Sab</div>
+    <div style="text-align:center;font-size:.8rem;font-weight:700;color:#64748b;padding:6px;">Min</div>
+  </div>
+  <div id="kalender-hari" style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;"></div>
+</div>
   </div>
 
   <!-- SLOT JAM -->
@@ -358,26 +366,61 @@ function formatTanggal(iso) {
   return `${d.getDate()} ${bulan[d.getMonth()]} ${d.getFullYear()}`;
 }
 
-async function loadKalender() {
-  const res = await fetch(`${BASE}/api/ketersediaan.php?sarana_id=${SARANA_ID}&mode=bulan`);
-  const data = await res.json();
+let viewDate = new Date(); // Menyimpan state bulan/tahun yang sedang dilihat
+
+function formatBulanTahun(date) {
+  const bulan = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  return `${bulan[date.getMonth()]} ${date.getFullYear()}`;
+}
+
+function ubahBulan(step) {
+  viewDate.setMonth(viewDate.getMonth() + step);
+  loadKalender(viewDate);
+}
+
+async function loadKalender(dateObj) {
+  const year = dateObj.getFullYear();
+  const month = dateObj.getMonth();
+  
+  // Format YYYY-MM untuk dikirim ke API
+  const bulanParam = `${year}-${String(month + 1).padStart(2, '0')}`;
+  
+  document.getElementById('judul-bulan').textContent = formatBulanTahun(dateObj);
+  
+  // Matikan tombol prev jika sudah di bulan berjalan
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const isCurrentMonth = (year === today.getFullYear() && month === today.getMonth());
+  document.getElementById('btn-prev').style.opacity = isCurrentMonth ? '0.5' : '1';
+  document.getElementById('btn-prev').style.pointerEvents = isCurrentMonth ? 'none' : 'auto';
+
   const container = document.getElementById('kalender-hari');
+  container.innerHTML = '<div style="grid-column:span 7; text-align:center; color:#94a3b8; padding:20px;">Memuat data...</div>';
+
+  const res = await fetch(`${BASE}/api/ketersediaan.php?sarana_id=${SARANA_ID}&mode=bulan&bulan=${bulanParam}`);
+  const data = await res.json();
+  
   container.innerHTML = '';
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  let firstDay = new Date(today);
-  const offset = (today.getDay() + 6) % 7;
-  firstDay.setDate(today.getDate() - offset);
+  // Cari hari pertama (tanggal 1)
+  const firstDay = new Date(year, month, 1);
+  // JS: 0=Minggu, 1=Senin. Kita ubah agar Senin=0, Minggu=6
+  let startOffset = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1; 
 
-  for (let i = 0; i < offset; i++) container.innerHTML += '<div></div>';
+  // Cari total hari dalam bulan ini
+  const lastDay = new Date(year, month + 1, 0).getDate();
 
-  for (let i = 0; i < 42; i++) {
-    const d = new Date(firstDay);
-    d.setDate(firstDay.getDate() + i);
+  // Render kotak kosong untuk hari sebelum tgl 1
+  for (let i = 0; i < startOffset; i++) {
+    container.innerHTML += '<div></div>';
+  }
+
+  // Render tanggal 1 sampai akhir bulan
+  for (let day = 1; day <= lastDay; day++) {
+    const d = new Date(year, month, day);
     d.setHours(0, 0, 0, 0);
-
-    const iso = tanggalKeISO(d);
+    
+    const iso = tanggalKeISO(d); // format YYYY-MM-DD
     const isPast = d < today;
     const jumlah = data[iso] || 0;
 
@@ -386,16 +429,21 @@ async function loadKalender() {
 
     const div = document.createElement('div');
     div.dataset.tanggal = iso;
-    div.style.cssText = `padding:10px 4px;text-align:center;border-radius:8px;background:${bg};color:${color};font-size:.85rem;cursor:${isPast?'not-allowed':'pointer'};border:2px solid transparent;transition:.2s;`;
-    div.innerHTML = `<div style="font-weight:700;">${d.getDate()}</div><div style="font-size:.7rem;">${isPast?'-':(jumlah===0?'kosong':jumlah+' jam')}</div>`;
+    div.style.cssText = `padding:12px 4px;text-align:center;border-radius:8px;background:${bg};color:${color};font-size:.85rem;cursor:${isPast?'not-allowed':'pointer'};border:2px solid transparent;transition:.2s;`;
+    div.innerHTML = `<div style="font-weight:700;">${day}</div>
+                     <div style="font-size:.7rem;">${isPast?'-':(jumlah===0?'kosong':jumlah+' jam')}</div>`;
 
     if (!isPast) {
       div.onmouseover = () => div.style.borderColor = '#166534';
-      div.onmouseout = () => { if (div.dataset.tanggal !== document.getElementById('input-tanggal').value) div.style.borderColor = 'transparent'; else div.style.borderColor = '#166534'; };
+      div.onmouseout = () => { 
+        if (div.dataset.tanggal !== document.getElementById('input-tanggal').value) div.style.borderColor = 'transparent'; 
+        else div.style.borderColor = '#166534'; 
+      };
       div.onclick = () => pilihTanggal(iso);
     }
     container.appendChild(div);
   }
+  
   tandaiTanggalAktif(document.getElementById('input-tanggal').value);
 }
 

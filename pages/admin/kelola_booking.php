@@ -282,7 +282,6 @@ ob_start();
                 </span>
                 <?php if (!empty($b['metode_pembayaran'])): ?>
                   <br><small style="color:#64748b;font-size:.72rem;">
-                    <!-- PERBAIKAN: Mengubah teks Tunai menjadi QRIS -->
                     <?= $b['metode_pembayaran'] === 'transfer' ? '🏦 Transfer' : ($b['metode_pembayaran'] === 'qris' ? '📱 QRIS' : '—') ?>
                   </small>
                 <?php endif; ?>
@@ -381,10 +380,7 @@ async function bukaDetail(id) {
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
           <div>
             <div style="font-size:.78rem;color:#64748b;">Metode</div>
-            <div style="font-weight:700;">
-              <!-- PERBAIKAN: Mengubah deteksi metode -->
-              ${b.metode_pembayaran === 'transfer' ? '🏦 Transfer Bank' : (b.metode_pembayaran === 'qris' ? '📱 QRIS' : '—')}
-            </div>
+            <div style="font-weight:700;">${b.metode_pembayaran === 'transfer' ? '🏦 Transfer Bank' : (b.metode_pembayaran === 'qris' ? '📱 QRIS' : '—')}</div>
           </div>
           <div><div style="font-size:.78rem;color:#64748b;">Status</div><div style="font-weight:700;">${b.status_pembayaran_label}</div></div>
         </div>
@@ -403,7 +399,7 @@ async function bukaDetail(id) {
       html += `<div class="alert alert-info" style="margin-bottom:12px;"><strong>📝 Catatan Pembayaran:</strong> ${b.catatan_pembayaran}</div>`;
     }
 
-    // TOMBOL AKSI PEMBAYARAN (Disamakan untuk QRIS & Transfer)
+    // TOMBOL AKSI PEMBAYARAN
     if (b.status_pembayaran !== 'berhasil') {
       html += `
         <form method="POST" action="" style="margin-top:8px;">
@@ -415,7 +411,6 @@ async function bukaDetail(id) {
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
       `;
-
       if (b.metode_pembayaran === 'transfer' || b.metode_pembayaran === 'qris') {
         html += `
             <button name="action" value="verifikasi_bayar" class="btn btn-primary btn-sm">✅ Verifikasi Pembayaran</button>
@@ -440,19 +435,19 @@ async function bukaDetail(id) {
       html += `<div class="alert alert-info" style="margin-bottom:20px;"><strong>📝 Catatan Booking:</strong><br>${b.catatan_petugas}</div>`;
     }
 
-    // AKSI BOOKING (VERIFIKASI / TOLAK)
+    // AKSI BOOKING (VERIFIKASI / TOLAK / WA)
     html += `<div style="border-top:1px solid #e2e8f0;padding-top:20px;">`;
 
     if (b.status === 'pending') {
       if (b.status_pembayaran === 'berhasil') {
-        // Jika lunas, bisa verifikasi booking
+        // Lunas -> Bisa verifikasi
         html += `
           <form method="POST" action="">
             <input type="hidden" name="id" value="${b.id}">
             <input type="hidden" name="return_qs" value="<?= e($returnQs) ?>">
             <div class="form-group">
               <label>Catatan Booking (opsional)</label>
-              <textarea name="catatan" class="form-control" rows="2"></textarea>
+              <textarea name="catatan" class="form-control" rows="2" placeholder="Catatan persetujuan..."></textarea>
             </div>
             <div style="display:flex;gap:10px;flex-wrap:wrap;">
               <button name="action" value="verifikasi" class="btn btn-primary">✅ Verifikasi Booking</button>
@@ -460,7 +455,7 @@ async function bukaDetail(id) {
             </div>
           </form>`;
       } else {
-        // Jika belum bayar, tetap tampilkan tombol TOLAK BOOKING
+        // Belum lunas -> Hanya bisa tolak
         html += `
           <div class="alert alert-warning" style="margin-bottom:16px; background:#fffbeb; border-left:4px solid #f59e0b; padding:16px; border-radius:8px;">
             <strong style="color:#92400e;">⚠️ Pembayaran Belum Lunas</strong><br>
@@ -470,28 +465,54 @@ async function bukaDetail(id) {
             <input type="hidden" name="id" value="${b.id}">
             <input type="hidden" name="return_qs" value="<?= e($returnQs) ?>">
             <div class="form-group">
-              <label>Catatan Penolakan (opsional)</label>
-              <textarea name="catatan" class="form-control" rows="2" placeholder="Alasan ditolak..."></textarea>
+              <label>Alasan Penolakan (akan dikirim ke WA)</label>
+              <textarea name="catatan" class="form-control" rows="2" placeholder="Contoh: Bukti transfer tidak valid..." required></textarea>
             </div>
             <button name="action" value="tolak" class="btn btn-danger btn-sm" onclick="return confirm('Yakin tolak booking ini?')">❌ Tolak Booking</button>
           </form>`;
       }
+    
     } else if (b.status === 'terverifikasi') {
+      // ===== TEMPLATE WA DISETUJUI =====
       let waNumber = b.no_hp.replace(/^0/, '62');
       let waText = `SIPASTRA - BPSDM Provinsi Kalimantan Selatan\n\nYth. Bapak/Ibu *${b.nama_penyewa}*,\n\nReservasi sarana olahraga Anda telah *DISETUJUI*.\n\n*DETAIL RESERVASI*\nKode Reservasi: ${b.kode_booking}\nNama Pemesan: ${b.nama_penyewa}\nInstansi: ${b.instansi || '-'}\nFasilitas: ${b.sarana_nama}\nTanggal Sewa: ${b.tanggal_formatted}\nJam Sewa: ${b.jam_mulai.substring(0,5)} - ${b.jam_selesai.substring(0,5)}\nTotal Jam: ${b.durasi_jam} Jam\nTotal Biaya: Rp ${b.total_bayar_fmt}\n\nMohon simpan kode reservasi tersebut sebagai bukti reservasi.\n\nTerima kasih.\n*SIPASTRA - BPSDM Provinsi Kalimantan Selatan*`;
       let waLink = `https://wa.me/${waNumber}?text=${encodeURIComponent(waText)}`;
 
       html += `
         <div style="display:flex; flex-direction:column; gap:12px;">
-          <a href="${waLink}" target="_blank" style="display:flex; align-items:center; justify-content:center; gap:8px; background:#16a34a; color:#fff; text-decoration:none; padding:12px; border-radius:8px; font-weight:600;"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg> Hubungi via WhatsApp</a>
+          <a href="${waLink}" target="_blank" style="display:flex; align-items:center; justify-content:center; gap:8px; background:#16a34a; color:#fff; text-decoration:none; padding:12px; border-radius:8px; font-weight:600;"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg> Hubungi via WhatsApp (Disetujui)</a>
           <form method="POST" action="" onsubmit="return confirm('Tandai booking sebagai SELESAI?')" style="margin-top:8px;">
             <input type="hidden" name="id" value="${b.id}">
             <input type="hidden" name="return_qs" value="<?= e($returnQs) ?>">
             <button name="action" value="selesai" class="btn btn-primary btn-block">🎉 Tandai Selesai</button>
           </form>
         </div>`;
+    
+    } else if (b.status === 'ditolak') {
+      // ===== TEMPLATE WA DITOLAK =====
+      let waNumber = b.no_hp.replace(/^0/, '62');
+      let alasan = b.catatan_petugas ? b.catatan_petugas : 'Tidak disebutkan.';
+      
+      let waText = `SIPASTRA - BPSDM Provinsi Kalimantan Selatan\n\nYth. Bapak/Ibu *${b.nama_penyewa}*,\n\nMohon maaf, reservasi sarana olahraga Anda telah *DITOLAK*.\n\n*ALASAN PENOLAKAN:*\n${alasan}\n\n*DETAIL RESERVASI*\nKode Reservasi: ${b.kode_booking}\nNama Pemesan: ${b.nama_penyewa}\nInstansi: ${b.instansi || '-'}\nFasilitas: ${b.sarana_nama}\nTanggal Sewa: ${b.tanggal_formatted}\nJam Sewa: ${b.jam_mulai.substring(0,5)} - ${b.jam_selesai.substring(0,5)}\n\nJika Anda merasa ini sebuah kesalahan, silakan hubungi admin.\n\nTerima kasih.\n*SIPASTRA - BPSDM Provinsi Kalimantan Selatan*`;
+      let waLink = `https://wa.me/${waNumber}?text=${encodeURIComponent(waText)}`;
+
+      html += `
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <a href="${waLink}" target="_blank" style="display:flex; align-items:center; justify-content:center; gap:8px; background:#16a34a; color:#fff; text-decoration:none; padding:12px; border-radius:8px; font-weight:600;"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg> Hubungi via WhatsApp (Ditolak)</a>
+          <form method="POST" action="" onsubmit="return confirm('Hapus data booking ini secara permanen?')" style="margin-top:8px;">
+            <input type="hidden" name="id" value="${b.id}">
+            <input type="hidden" name="return_qs" value="<?= e($returnQs) ?>">
+            <button name="action" value="hapus" class="btn btn-danger btn-block">🗑️ Hapus Permanen</button>
+          </form>
+        </div>`;
     } else {
-      html += `<form method="POST" action="" onsubmit="return confirm('Hapus booking ini secara permanen?')"><input type="hidden" name="id" value="${b.id}"><input type="hidden" name="return_qs" value="<?= e($returnQs) ?>"><button name="action" value="hapus" class="btn btn-danger">🗑️ Hapus Permanen</button></form>`;
+      // Selesai / Batal
+      html += `
+        <form method="POST" action="" onsubmit="return confirm('Hapus data booking ini secara permanen?')">
+          <input type="hidden" name="id" value="${b.id}">
+          <input type="hidden" name="return_qs" value="<?= e($returnQs) ?>">
+          <button name="action" value="hapus" class="btn btn-danger">🗑️ Hapus Permanen</button>
+        </form>`;
     }
 
     html += `</div>`;

@@ -6,9 +6,20 @@ if (!isset($pageTitle)) $pageTitle = $title;
 
 $nama = $_SESSION['nama'] ?? 'Admin';
 
-function menuItem($url, $icon, $label, $key, $activeMenu) {
+// 1. HITUNG JUMLAH RESERVASI YANG PENDING (BELUM DIVERIFIKASI)
+$pending_count = 0;
+if (isset($conn)) {
+    $q_pending = $conn->query("SELECT COUNT(*) c FROM booking WHERE status='pending'");
+    if ($q_pending) {
+        $pending_count = $q_pending->fetch_assoc()['c'];
+    }
+}
+
+// 2. UPDATE FUNGSI MENU UNTUK MENAMPILKAN BADGE
+function menuItem($url, $icon, $label, $key, $activeMenu, $badge = 0) {
     $cls = $activeMenu === $key ? 'active' : '';
-    echo "<a href=\"$url\" class=\"$cls\"><span class=\"icon\">$icon</span> $label</a>";
+    $badgeHtml = $badge > 0 ? "<span class=\"menu-badge\">$badge</span>" : "";
+    echo "<a href=\"$url\" class=\"$cls\"><span class=\"icon\">$icon</span> $label $badgeHtml</a>";
 }
 ?>
 <!DOCTYPE html>
@@ -31,7 +42,12 @@ function menuItem($url, $icon, $label, $key, $activeMenu) {
 
   <nav class="sidebar-menu">
     <?php menuItem(BASE_URL . '/pages/admin/dashboard.php', '🏠', 'Dashboard', 'dashboard', $activeMenu); ?>
-    <?php menuItem(BASE_URL . '/pages/admin/kelola_booking.php', '📅', 'Reservasi', 'reservasi', $activeMenu); ?>
+    
+    <!-- MENU RESERVASI DENGAN BADGE NOTIFIKASI -->
+    <?php menuItem(BASE_URL . '/pages/admin/kelola_booking.php', '🎫', 'Reservasi', 'reservasi', $activeMenu, $pending_count); ?>
+    
+    <?php menuItem(BASE_URL . '/pages/admin/jadwal.php', '🗓️', 'Jadwal', 'jadwal', $activeMenu); ?>
+
     <?php menuItem(BASE_URL . '/pages/admin/kelola_sarana.php', '🏢', 'Fasilitas', 'fasilitas', $activeMenu); ?>
     
     <div class="sidebar-section">Laporan</div>

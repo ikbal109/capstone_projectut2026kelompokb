@@ -48,7 +48,6 @@ $sarana = $conn->query("SELECT * FROM sarana WHERE status='tersedia' ORDER BY id
     <div class="hero-content" style="margin-left: 10%;">
       <h1 class="hero-title">Reservasi Sarana Olahraga<br>dengan Mudah</h1>
       <p class="hero-subtitle">Sistem Informasi Pengelolaan dan Reservasi Sarana Olahraga Berbasis Web untuk memudahkan masyarakat melakukan pemesanan fasilitas olahraga.</p>
-      <a href="#fasilitas" class="btn-mulai">Mulai Reservasi</a>
     </div>
   
 </section>
