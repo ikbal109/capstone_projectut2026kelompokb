@@ -1,9 +1,9 @@
 -- phpMyAdmin SQL Dump
--- version 5.2.1
+-- version 5.2.3
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 29, 2026 at 03:24 PM
+-- Generation Time: Nov 01, 2026 at 03:22 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -63,9 +63,9 @@ CREATE TABLE `booking` (
 --
 
 INSERT INTO `booking` (`id`, `kode_booking`, `sarana_id`, `nama_penyewa`, `no_hp`, `email`, `instansi`, `tanggal`, `jam_mulai`, `jam_selesai`, `durasi_jam`, `harga_per_jam`, `subtotal`, `diskon_id`, `diskon_persen`, `total_bayar`, `metode_pembayaran`, `status_pembayaran`, `bukti_transfer`, `catatan_pembayaran`, `verified_payment_by`, `verified_payment_at`, `status`, `kode_gambar`, `catatan_petugas`, `verified_by`, `verified_at`, `created_at`) VALUES
-(4, 'BKG-261029-8F763', 2, 'tes2', '085172203031', 'hsgvsudh@gmail.com', 'PDIP', '2026-12-01', '08:00:00', '10:00:00', 2, 50000.00, 100000.00, NULL, 0.00, 100000.00, 'qris', 'berhasil', 'assets/bukti_transfer/bukti-4-1793282074.jpg', NULL, 1, '2026-10-29 20:54:49', 'terverifikasi', 'assets/booking_codes/kode_BKG-261029-8F763.svg', '', 1, '2026-10-29 21:00:50', '2026-10-29 13:49:08'),
-(5, 'BKG-261029-B998D', 1, 'tes', '085172203031', 'hsgvsudh@gmail.com', 'GOLKAR', '2026-11-25', '09:00:00', '12:00:00', 3, 150000.00, 450000.00, NULL, 0.00, 450000.00, 'transfer', 'belum_bayar', NULL, NULL, NULL, NULL, 'pending', 'assets/booking_codes/kode_BKG-261029-B998D.svg', NULL, NULL, NULL, '2026-10-29 14:01:26'),
-(6, 'BKG-261029-EEA50', 1, 'tes3', '085172203031', 'hsgvsudh@gmail.com', 'PDIP2', '2026-11-30', '08:00:00', '10:00:00', 2, 150000.00, 300000.00, NULL, 0.00, 300000.00, 'qris', 'belum_bayar', NULL, NULL, NULL, NULL, 'pending', 'assets/booking_codes/kode_BKG-261029-EEA50.svg', NULL, NULL, NULL, '2026-10-29 14:01:50');
+(10, 'BKG-261101-D4658', 1, 'tes6', '085270821454', 'hsgvsudh@gmail.com', 'PDIP', '2026-12-27', '08:00:00', '11:00:00', 3, 150000.00, 450000.00, NULL, 0.00, 450000.00, 'transfer', 'berhasil', 'assets/bukti_transfer/bukti-10-1793539313.jpg', '', 1, '2026-11-01 20:53:57', 'terverifikasi', 'assets/booking_codes/kode_BKG-261101-D4658.svg', '', 1, '2026-11-01 20:54:01', '2026-11-01 13:21:48'),
+(11, 'BKG-261101-824EB', 2, 'tes', '085172203031', 'hsgvsudh@gmail.com', 'GOLKAR', '2026-12-17', '08:00:00', '11:00:00', 3, 50000.00, 150000.00, NULL, 0.00, 150000.00, 'transfer', 'belum_bayar', NULL, NULL, NULL, NULL, 'pending', 'assets/booking_codes/kode_BKG-261101-824EB.svg', NULL, NULL, NULL, '2026-11-01 13:52:23'),
+(12, 'BKG-261101-C68F0', 1, 'tes2', '085172203031', 'hsgvsudh@gmail.com', 'PDIP', '2026-12-30', '12:00:00', '15:00:00', 3, 150000.00, 450000.00, NULL, 0.00, 450000.00, 'transfer', 'belum_bayar', NULL, NULL, NULL, NULL, 'pending', 'assets/booking_codes/kode_BKG-261101-C68F0.svg', NULL, NULL, NULL, '2026-11-01 13:52:42');
 
 -- --------------------------------------------------------
 
@@ -186,7 +186,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `booking`
 --
 ALTER TABLE `booking`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `pengaturan`
