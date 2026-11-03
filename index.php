@@ -60,41 +60,65 @@ $sarana = $conn->query("SELECT * FROM sarana WHERE status='tersedia' ORDER BY id
       <p>Pilih fasilitas olahraga yang ingin Anda gunakan</p>
     </div>
 
-    <div class="fasilitas-grid">
-      <?php if ($sarana->num_rows === 0): ?>
-        <div style="text-align:center; width:100%; color:#64748b; padding:40px;">
-          Belum ada fasilitas yang tersedia saat ini.
-        </div>
-      <?php endif; ?>
+        <!-- AREA SLIDER FASILITAS -->
+    <div style="position: relative;">
+      <!-- Tombol Panah Kiri (Hanya muncul jika di desktop) -->
+      <button onclick="document.getElementById('slider-fasilitas').scrollBy({left: -350, behavior: 'smooth'})" 
+              class="slider-btn" style="left: -20px;">
+        &#10094;
+      </button>
 
-      <?php while($s = $sarana->fetch_assoc()): ?>
-        <a href="<?= BASE_URL ?>/pages/detail_sarana.php?slug=<?= urlencode($s['slug'] ?: $s['id']) ?>" class="fasilitas-card">
-          <div class="card-img">
-            <?php if ($s['gambar']): ?>
-              <img src="<?= BASE_URL ?>/assets/img/sarana/<?= e($s['gambar']) ?>" alt="<?= e($s['nama']) ?>">
-            <?php else: ?>
-              <img src="https://via.placeholder.com/600x400?text=<?= urlencode($s['nama']) ?>" alt="">
-            <?php endif; ?>
+      <!-- Container yang bisa di-scroll -->
+      <div id="slider-fasilitas" style="display: flex; gap: 24px; overflow-x: auto; padding-bottom: 20px; scroll-snap-type: x mandatory; scrollbar-width: none; -ms-overflow-style: none; justify-content: center; max-width: 1000px; margin: 0 auto;">
+        <style>
+          /* Sembunyikan scrollbar bawaan browser di Chrome/Safari */
+          #slider-fasilitas::-webkit-scrollbar { display: none; }
+        </style>
+
+        <?php if ($sarana->num_rows === 0): ?>
+          <div style="width: 100%; text-align: center; color: #64748b; padding: 40px;">
+            Belum ada fasilitas yang tersedia saat ini.
           </div>
-          <div class="card-body">
-            <div class="card-icon">
-              <?php 
-                // Ikon sederhana berdasarkan jenis
-                $jenis = strtolower($s['jenis']);
-                if (strpos($jenis, 'futsal') !== false || strpos($jenis, 'bola') !== false) echo '⚽';
-                elseif (strpos($jenis, 'tenis') !== false) echo '🎾';
-                elseif (strpos($jenis, 'badminton') !== false) echo '🏸';
-                elseif (strpos($jenis, 'basket') !== false) echo '🏀';
-                else echo '🏟️';
-              ?>
+        <?php endif; ?>
+
+        <?php while($s = $sarana->fetch_assoc()): ?>
+          <!-- Card Fasilitas (min-width ditentukan agar ukurannya seragam) -->
+          <a href="<?= BASE_URL ?>/pages/detail_sarana.php?slug=<?= urlencode($s['slug'] ?: $s['id']) ?>" 
+             class="fasilitas-card" 
+             style="min-width: 300px; max-width: 300px; scroll-snap-align: start; flex-shrink: 0;">
+            
+            <div class="card-img">
+              <?php if ($s['gambar']): ?>
+                <img src="<?= BASE_URL ?>/assets/img/sarana/<?= e($s['gambar']) ?>" alt="<?= e($s['nama']) ?>">
+              <?php else: ?>
+                <img src="https://via.placeholder.com/600x400?text=<?= urlencode($s['nama']) ?>" alt="">
+              <?php endif; ?>
             </div>
-            <div class="card-text">
-              <h3><?= e($s['nama']) ?></h3>
-              <p><?= e($s['deskripsi']) ?></p>
+            <div class="card-body">
+              <div class="card-icon">
+                <?php 
+                  $jenis = strtolower($s['jenis']);
+                  if (strpos($jenis, 'futsal') !== false || strpos($jenis, 'bola') !== false) echo '⚽';
+                  elseif (strpos($jenis, 'tenis') !== false) echo '🎾';
+                  elseif (strpos($jenis, 'badminton') !== false) echo '🏸';
+                  elseif (strpos($jenis, 'basket') !== false) echo '🏀';
+                  else echo '🏟️';
+                ?>
+              </div>
+              <div class="card-text">
+                <h3><?= e($s['nama']) ?></h3>
+                <p><?= e($s['deskripsi']) ?></p>
+              </div>
             </div>
-          </div>
-        </a>
-      <?php endwhile; ?>
+          </a>
+        <?php endwhile; ?>
+      </div>
+
+      <!-- Tombol Panah Kanan -->
+      <button onclick="document.getElementById('slider-fasilitas').scrollBy({left: 350, behavior: 'smooth'})" 
+              class="slider-btn" style="right: -20px;">
+        &#10095;
+      </button>
     </div>
   </div>
 </section>

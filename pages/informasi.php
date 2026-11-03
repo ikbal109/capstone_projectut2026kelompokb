@@ -164,7 +164,7 @@ require_once __DIR__ . '/../includes/auth.php';
 <div class="info-section">
   <div class="landing-container">
     
-    <div class="info-header">
+    <div class="info-header" style="padding: 20px 0;">
       <h1>Informasi SIPASTRA</h1>
       <p>Informasi mengenai BPSDM Provinsi Kalimantan Selatan, fasilitas olahraga, dan layanan reservasi SIPASTRA.</p>
     </div>

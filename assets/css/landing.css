@@ -399,3 +399,37 @@ body.landing-body, html {
     display: none;
   }
 }
+
+/* CSS untuk Tombol Navigasi Slider */
+.slider-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  color: #166534;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  transition: 0.2s;
+}
+
+.slider-btn:hover {
+  background: #f0fdf4;
+  border-color: #166534;
+  transform: translateY(-50%) scale(1.1);
+}
+
+/* Sembunyikan tombol panah di HP karena pengguna bisa geser pakai jari */
+@media (max-width: 768px) {
+  .slider-btn {
+    display: none;
+  }
+}
